@@ -1,6 +1,8 @@
 <resources>
-    <string name="app_name">Kahasolusi-Kotlin</string>
+    <string name="app_name">KAHASOLUSI</string>
     <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="title_dashboard">Portofolio</string>
+    <string name="title_notifications">Technology</string>
+    <string name="app_image_description">Application Image</string>
+    <string name="profile_description">Profile Icon</string>
 </resources>
