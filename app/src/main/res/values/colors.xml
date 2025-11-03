@@ -21,4 +21,9 @@
     <color name="text_color">#2C3E50</color>
     <color name="card_background">#FFFFFF</color>
     <color name="technology_card_blue">#D7EDF5</color>
+    
+    <!-- Login page colors -->
+    <color name="input_background">#F0F0F0</color>
+    <color name="hint_color">#9E9E9E</color>
+    <color name="button_primary">#4A90E2</color>
 </resources>
