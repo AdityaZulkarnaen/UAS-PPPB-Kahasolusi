@@ -1,5 +1,6 @@
 package com.example.kahasolusi_kotlin
 
+import android.content.Intent
 import android.graphics.LinearGradient
 import android.graphics.Shader
 import android.os.Bundle
@@ -19,12 +20,23 @@ import com.example.kahasolusi_kotlin.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Initialize SharedPreferences helper
+        sharedPreferencesHelper = SharedPreferencesHelper(this)
+        
+        // Check if user is logged in
+        if (!sharedPreferencesHelper.isLoggedIn()) {
+            // Redirect to login if not logged in
+            navigateToLogin()
+            return
+        }
 
         // Setup custom title with gradient
         setupGradientTitle()
@@ -41,6 +53,9 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+        
+        // Display welcome message with user data
+        displayWelcomeMessage()
     }
 
     private fun setupGradientTitle() {
@@ -72,19 +87,54 @@ class MainActivity : AppCompatActivity() {
         
         supportActionBar?.customView = customView
     }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.toolbar_menu, menu)
+    
+    private fun displayWelcomeMessage() {
+        val userData = sharedPreferencesHelper.getLoggedInUser()
+        userData?.let {
+            Toast.makeText(this, "Selamat datang, ${it.fullName}!", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun navigateToLogin() {
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+    
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
         return true
     }
-
+    
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_logout -> {
+                performLogout()
+                true
+            }
             R.id.action_profile -> {
-                Toast.makeText(this, "Profile clicked", Toast.LENGTH_SHORT).show()
+                showUserProfile()
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+    
+    private fun performLogout() {
+        sharedPreferencesHelper.logoutUser()
+        Toast.makeText(this, "Logout berhasil", Toast.LENGTH_SHORT).show()
+        navigateToLogin()
+    }
+    
+    private fun showUserProfile() {
+        val userData = sharedPreferencesHelper.getLoggedInUser()
+        userData?.let {
+            val message = "Profil Pengguna:\n" +
+                    "Nama: ${it.fullName}\n" +
+                    "Email: ${it.email}\n" +
+                    "Username: ${it.username}"
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
     }
 }

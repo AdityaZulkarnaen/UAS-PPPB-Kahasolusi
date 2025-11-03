@@ -12,15 +12,23 @@ import com.example.kahasolusi_kotlin.databinding.ActivityLoginBinding
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
+    private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        
+        // Initialize SharedPreferences helper
+        sharedPreferencesHelper = SharedPreferencesHelper(this)
+        
+        // Check if user is already logged in
+        checkLoginStatus()
+        
         setupUI()
         setupClickListeners()
+        loadRememberedCredentials()
     }
 
     private fun setupUI() {
@@ -88,43 +96,69 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkLoginStatus() {
+        // Jika user sudah login, langsung ke MainActivity
+        if (sharedPreferencesHelper.isLoggedIn()) {
+            navigateToMainActivity()
+        }
+    }
+    
+    private fun loadRememberedCredentials() {
+        // Load remembered credentials jika ada
+        val rememberedCredentials = sharedPreferencesHelper.getRememberedCredentials()
+        rememberedCredentials?.let { (username, password) ->
+            binding.etUsername.setText(username)
+            binding.etPassword.setText(password)
+            binding.cbRememberMe.isChecked = true
+        }
+    }
+
     private fun performLogin() {
         val username = binding.etUsername.text?.toString()?.trim() ?: ""
         val password = binding.etPassword.text?.toString()?.trim() ?: ""
         val rememberMe = binding.cbRememberMe.isChecked
 
+        // Validasi input
         if (username.isEmpty()) {
-            binding.etUsername.error = "Username is required"
+            binding.tilUsername.error = "Username tidak boleh kosong"
             return
         }
 
         if (password.isEmpty()) {
-            binding.etPassword.error = "Password is required"
+            binding.tilPassword.error = "Password tidak boleh kosong"
             return
         }
 
-        // Flexible validation - any email format with 6+ char password
-        if (username.contains("@") && password.length >= 6) {
+        // Clear previous errors
+        binding.tilUsername.error = null
+        binding.tilPassword.error = null
+
+        // Coba login menggunakan SharedPreferences
+        if (sharedPreferencesHelper.loginUser(username, password, rememberMe)) {
+            // Login berhasil
             val message = if (rememberMe) {
-                "Login successful! Credentials remembered."
+                "Login berhasil! Kredensial akan diingat."
             } else {
-                "Login successful!"
+                "Login berhasil!"
             }
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             
-            // Navigate to MainActivity
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
+            navigateToMainActivity()
         } else {
-            var errorMessage = "Login failed! "
-            if (!username.contains("@")) {
-                errorMessage += "Username must be email format. "
+            // Login gagal
+            if (sharedPreferencesHelper.isUserExists(username)) {
+                binding.tilPassword.error = "Password salah"
+                Toast.makeText(this, "Password yang Anda masukkan salah", Toast.LENGTH_LONG).show()
+            } else {
+                binding.tilUsername.error = "Username tidak ditemukan"
+                Toast.makeText(this, "Username tidak terdaftar. Silakan daftar terlebih dahulu.", Toast.LENGTH_LONG).show()
             }
-            if (password.length < 6) {
-                errorMessage += "Password must be at least 6 characters."
-            }
-            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
         }
+    }
+    
+    private fun navigateToMainActivity() {
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
+        finish()
     }
 }
