@@ -2,15 +2,51 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="horizontal">
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="0dp"
+    android:paddingEnd="8dp">
 
     <TextView
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
         android:text="KAHASOLUSI"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:fontFamily="sans-serif-medium" />
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center" />
+
+    <!-- Spacer untuk memberi jarak -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="0.2" />
+
+    <!-- Button Sign In (tampil saat belum login) -->
+    <Button
+        android:id="@+id/btnSignIn"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:text="Sign In"
+        android:textSize="14sp"
+        android:textColor="@color/white"
+        android:backgroundTint="#1486B2"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="gone"
+        style="?attr/materialButtonOutlinedStyle" />
+
+    <!-- Icon Menu (tampil saat sudah login) -->
+    <ImageButton
+        android:id="@+id/btnMenuToolbar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_more_vert"
+        android:contentDescription="Menu"
+        android:padding="12dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
 
 </LinearLayout>

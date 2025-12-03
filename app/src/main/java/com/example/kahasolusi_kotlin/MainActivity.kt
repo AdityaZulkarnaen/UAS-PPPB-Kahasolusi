@@ -6,6 +6,10 @@ import android.graphics.Shader
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.Button
+import android.widget.ImageButton
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -30,15 +34,8 @@ class MainActivity : AppCompatActivity() {
         
         // Initialize SharedPreferences helper
         sharedPreferencesHelper = SharedPreferencesHelper(this)
-        
-        // Check if user is logged in
-        if (!sharedPreferencesHelper.isLoggedIn()) {
-            // Redirect to login if not logged in
-            navigateToLogin()
-            return
-        }
 
-        // Setup custom title with gradient
+        // Setup custom title with gradient and login/menu button
         setupGradientTitle()
 
         val navView: BottomNavigationView = binding.navView
@@ -54,8 +51,10 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
         
-        // Display welcome message with user data
-        displayWelcomeMessage()
+        // Display welcome message only if user is logged in
+        if (sharedPreferencesHelper.isLoggedIn()) {
+            displayWelcomeMessage()
+        }
     }
 
     private fun setupGradientTitle() {
@@ -65,6 +64,23 @@ class MainActivity : AppCompatActivity() {
         val customView = layoutInflater.inflate(R.layout.toolbar_title, null)
         val titleView = customView.findViewById<TextView>(android.R.id.text1) ?: 
                        (customView as? android.view.ViewGroup)?.getChildAt(0) as? TextView
+        
+        // Get Sign In button and Menu button
+        val signInButton = customView.findViewById<Button>(R.id.btnSignIn)
+        val menuButton = customView.findViewById<ImageButton>(R.id.btnMenuToolbar)
+        
+        // Update toolbar based on login status
+        updateToolbarButtons(signInButton, menuButton)
+        
+        // Sign In button click
+        signInButton?.setOnClickListener {
+            navigateToLogin()
+        }
+        
+        // Menu button click - show popup menu
+        menuButton?.setOnClickListener { view ->
+            showPopupMenu(view)
+        }
         
         titleView?.post {
             val paint = titleView.paint
@@ -88,6 +104,39 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.customView = customView
     }
     
+    private fun updateToolbarButtons(signInButton: Button?, menuButton: ImageButton?) {
+        if (sharedPreferencesHelper.isLoggedIn()) {
+            // User sudah login - tampilkan menu button, sembunyikan sign in
+            signInButton?.visibility = View.GONE
+            menuButton?.visibility = View.VISIBLE
+        } else {
+            // User belum login - tampilkan sign in button, sembunyikan menu
+            signInButton?.visibility = View.VISIBLE
+            menuButton?.visibility = View.GONE
+        }
+    }
+    
+    private fun showPopupMenu(view: View) {
+        val popupMenu = PopupMenu(this, view)
+        popupMenu.menuInflater.inflate(R.menu.main_menu, popupMenu.menu)
+        
+        popupMenu.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_profile -> {
+                    showUserProfile()
+                    true
+                }
+                R.id.action_logout -> {
+                    performLogout()
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        popupMenu.show()
+    }
+    
     private fun displayWelcomeMessage() {
         val userData = sharedPreferencesHelper.getLoggedInUser()
         userData?.let {
@@ -97,34 +146,18 @@ class MainActivity : AppCompatActivity() {
     
     private fun navigateToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
-        finish()
-    }
-    
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-    
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_logout -> {
-                performLogout()
-                true
-            }
-            R.id.action_profile -> {
-                showUserProfile()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
     
     private fun performLogout() {
         sharedPreferencesHelper.logoutUser()
-        Toast.makeText(this, "Logout berhasil", Toast.LENGTH_SHORT).show()
-        navigateToLogin()
+        Toast.makeText(this, "Logout berhasil. Silakan login untuk mengakses fitur lengkap.", Toast.LENGTH_LONG).show()
+        
+        // Update toolbar - tampilkan Sign In button, sembunyikan menu
+        val customView = supportActionBar?.customView
+        val signInButton = customView?.findViewById<Button>(R.id.btnSignIn)
+        val menuButton = customView?.findViewById<ImageButton>(R.id.btnMenuToolbar)
+        updateToolbarButtons(signInButton, menuButton)
     }
     
     private fun showUserProfile() {

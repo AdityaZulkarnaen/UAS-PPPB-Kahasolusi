@@ -23,9 +23,6 @@ class LoginActivity : AppCompatActivity() {
         // Initialize SharedPreferences helper
         sharedPreferencesHelper = SharedPreferencesHelper(this)
         
-        // Check if user is already logged in
-        checkLoginStatus()
-        
         setupUI()
         setupClickListeners()
         loadRememberedCredentials()
@@ -96,13 +93,6 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkLoginStatus() {
-        // Jika user sudah login, langsung ke MainActivity
-        if (sharedPreferencesHelper.isLoggedIn()) {
-            navigateToMainActivity()
-        }
-    }
-    
     private fun loadRememberedCredentials() {
         // Load remembered credentials jika ada
         val rememberedCredentials = sharedPreferencesHelper.getRememberedCredentials()
