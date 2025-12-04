@@ -15,6 +15,8 @@ class PortfolioAdminActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPortfolioAdminBinding
     private var selectedImageUri: Uri? = null
+    private var editMode = false
+    private var portfolioId: String? = null
 
     private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -34,8 +36,35 @@ class PortfolioAdminActivity : AppCompatActivity() {
         binding = ActivityPortfolioAdminBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Check if edit mode
+        editMode = intent.getBooleanExtra("edit_mode", false)
+        if (editMode) {
+            loadPortfolioData()
+        }
+
         setupUI()
         setupClickListeners()
+    }
+
+    private fun loadPortfolioData() {
+        portfolioId = intent.getStringExtra("portfolio_id")
+        binding.etJudulProject.setText(intent.getStringExtra("portfolio_judul"))
+        binding.actKategori.setText(intent.getStringExtra("portfolio_kategori"), false)
+        binding.etLokasi.setText(intent.getStringExtra("portfolio_lokasi"))
+        binding.etDeskripsi.setText(intent.getStringExtra("portfolio_deskripsi"))
+        binding.actTechStack.setText(intent.getStringExtra("portfolio_techstack"), false)
+
+        val gambarUri = intent.getStringExtra("portfolio_gambar")
+        if (!gambarUri.isNullOrEmpty()) {
+            try {
+                selectedImageUri = Uri.parse(gambarUri)
+                binding.ivPreview.setImageURI(selectedImageUri)
+                binding.tvUploadHint.text = "Gambar dipilih"
+                binding.tvUploadSubhint.text = "Klik untuk ganti gambar"
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun setupUI() {
@@ -125,8 +154,14 @@ class PortfolioAdminActivity : AppCompatActivity() {
         }
 
         // Buat object Portfolio
+        val id = if (editMode && portfolioId != null) {
+            portfolioId!!
+        } else {
+            System.currentTimeMillis().toString()
+        }
+
         val portfolio = Portfolio(
-            id = System.currentTimeMillis().toString(),
+            id = id,
             judul = judul,
             kategori = kategori.ifEmpty { "Uncategorized" },
             lokasi = lokasi,
@@ -138,7 +173,8 @@ class PortfolioAdminActivity : AppCompatActivity() {
         // Simpan ke SharedPreferences atau Database (implementasi nanti)
         saveToStorage(portfolio)
 
-        Toast.makeText(this, "Portfolio berhasil disimpan!", Toast.LENGTH_SHORT).show()
+        val message = if (editMode) "Portfolio berhasil diupdate!" else "Portfolio berhasil disimpan!"
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         finish()
     }
 

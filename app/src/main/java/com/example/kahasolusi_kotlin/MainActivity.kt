@@ -176,7 +176,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun navigateToPortfolioAdmin() {
-        val intent = Intent(this, PortfolioAdminActivity::class.java)
+        val intent = Intent(this, PortfolioListActivity::class.java)
         startActivity(intent)
     }
 }
