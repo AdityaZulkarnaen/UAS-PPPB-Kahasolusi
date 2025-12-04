@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_gray"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/white"
+            android:elevation="4dp"
+            android:paddingHorizontal="16dp">
+
+            <ImageView
+                android:id="@+id/iv_back"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Back"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:tint="@color/primary_blue" />
+
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="KAHASOLUSI"
+                android:textColor="@color/primary_blue"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/iv_profile"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_launcher_foreground"
+                android:contentDescription="Profile"
+                android:background="@drawable/technology_icon_background"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:tint="@color/primary_blue" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Form Content -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Title Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tambah Project Baru"
+                android:textColor="@color/text_color"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Buat portfolio project terbaru Anda"
+                android:textColor="@color/hint_color"
+                android:textSize="14sp"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Judul Project -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Judul Project"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:boxBackgroundMode="outline"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_judul_project"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Masukan judul project"
+                    android:inputType="text"
+                    android:textSize="14sp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Kategori -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kategori"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_kategori"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp">
+
+                <AutoCompleteTextView
+                    android:id="@+id/act_kategori"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Pilih kategori (optional)"
+                    android:inputType="none"
+                    android:textSize="14sp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Lokasi -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lokasi"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:boxBackgroundMode="outline"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_lokasi"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Contoh: Yogyakarta"
+                    android:inputType="text"
+                    android:textSize="14sp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Deskripsi Project -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Deskripsi Project"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:boxBackgroundMode="outline"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_deskripsi"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:textSize="14sp"
+                    android:padding="12dp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Upload Gambar Project -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Upload Gambar Project"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cv_upload_gambar"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/white"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/iv_preview"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_launcher_foreground"
+                        android:contentDescription="Upload Icon"
+                        android:visibility="visible"
+                        app:tint="@color/hint_color" />
+
+                    <TextView
+                        android:id="@+id/tv_upload_hint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select files to upload"
+                        android:textColor="@color/text_color"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_upload_subhint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="or drag and drop files"
+                        android:textColor="@color/hint_color"
+                        android:textSize="12sp"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tech Stack -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tech Stack"
+                android:textColor="@color/text_color"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_tech_stack"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp">
+
+                <AutoCompleteTextView
+                    android:id="@+id/act_tech_stack"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Pilih Tech Stack"
+                    android:inputType="none"
+                    android:textSize="14sp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="32dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_simpan"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Simpan"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/primary_blue"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_batal"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Batal"
+                    android:textColor="@color/text_color"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/input_background"
+                    app:cornerRadius="8dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

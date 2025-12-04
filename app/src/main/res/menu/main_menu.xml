@@ -9,6 +9,12 @@
         app:showAsAction="never" />
     
     <item
+        android:id="@+id/action_portfolio_admin"
+        android:title="Portfolio Admin"
+        android:icon="@drawable/ic_dashboard_black_24dp"
+        app:showAsAction="never" />
+    
+    <item
         android:id="@+id/action_logout"
         android:title="Logout"
         android:icon="@drawable/ic_logout"

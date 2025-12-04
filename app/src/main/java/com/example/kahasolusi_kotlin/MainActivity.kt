@@ -126,6 +126,10 @@ class MainActivity : AppCompatActivity() {
                     showUserProfile()
                     true
                 }
+                R.id.action_portfolio_admin -> {
+                    navigateToPortfolioAdmin()
+                    true
+                }
                 R.id.action_logout -> {
                     performLogout()
                     true
@@ -169,5 +173,10 @@ class MainActivity : AppCompatActivity() {
                     "Username: ${it.username}"
             Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
+    }
+    
+    private fun navigateToPortfolioAdmin() {
+        val intent = Intent(this, PortfolioAdminActivity::class.java)
+        startActivity(intent)
     }
 }
