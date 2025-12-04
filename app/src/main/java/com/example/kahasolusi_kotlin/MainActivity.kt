@@ -7,25 +7,25 @@ import android.view.MenuItem
 import android.widget.Toast
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.kahasolusi_kotlin.databinding.ActivityMainBinding
+import com.example.kahasolusi_kotlin.firebase.FirebaseAuthManager
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
+    private val authManager = FirebaseAuthManager()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
-        // Initialize SharedPreferences helper
-        sharedPreferencesHelper = SharedPreferencesHelper(this)
 
         // Setup navigation
         val navView: BottomNavigationView = binding.navView
@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         navView.setupWithNavController(navController)
         
         // Display welcome message only if user is logged in
-        if (sharedPreferencesHelper.isLoggedIn()) {
+        if (authManager.isUserLoggedIn()) {
             displayWelcomeMessage()
         }
     }
@@ -46,15 +46,25 @@ class MainActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.main_menu, menu)
         
         // Show/hide menu items based on login status
-        menu?.findItem(R.id.action_profile)?.isVisible = sharedPreferencesHelper.isLoggedIn()
-        menu?.findItem(R.id.action_portfolio_admin)?.isVisible = sharedPreferencesHelper.isLoggedIn()
-        menu?.findItem(R.id.action_logout)?.isVisible = sharedPreferencesHelper.isLoggedIn()
+        val isLoggedIn = authManager.isUserLoggedIn()
+        
+        // Login menu - only show when NOT logged in
+        menu?.findItem(R.id.action_login)?.isVisible = !isLoggedIn
+        
+        // User menus - only show when logged in
+        menu?.findItem(R.id.action_profile)?.isVisible = isLoggedIn
+        menu?.findItem(R.id.action_portfolio_admin)?.isVisible = isLoggedIn
+        menu?.findItem(R.id.action_logout)?.isVisible = isLoggedIn
         
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_login -> {
+                navigateToLogin()
+                true
+            }
             R.id.action_profile -> {
                 showUserProfile()
                 true
@@ -72,33 +82,47 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun displayWelcomeMessage() {
-        val userData = sharedPreferencesHelper.getLoggedInUser()
-        userData?.let {
-            Toast.makeText(this, "Selamat datang, ${it.fullName}!", Toast.LENGTH_LONG).show()
+        val currentUser = authManager.getCurrentUser()
+        currentUser?.let {
+            val displayName = it.displayName ?: it.email ?: "User"
+            Toast.makeText(this, "Selamat datang, $displayName!", Toast.LENGTH_LONG).show()
         }
     }
     
     private fun performLogout() {
-        sharedPreferencesHelper.logoutUser()
-        Toast.makeText(this, "Logout berhasil. Silakan login untuk mengakses fitur lengkap.", Toast.LENGTH_LONG).show()
-        
-        // Refresh menu
-        invalidateOptionsMenu()
+        lifecycleScope.launch {
+            authManager.logoutUser()
+            Toast.makeText(
+                this@MainActivity,
+                "Logout berhasil. Silakan login untuk mengakses fitur lengkap.",
+                Toast.LENGTH_LONG
+            ).show()
+            
+            // Refresh menu
+            invalidateOptionsMenu()
+        }
     }
     
     private fun showUserProfile() {
-        val userData = sharedPreferencesHelper.getLoggedInUser()
-        userData?.let {
+        val currentUser = authManager.getCurrentUser()
+        currentUser?.let {
+            val displayName = it.displayName ?: "Tidak tersedia"
+            val email = it.email ?: "Tidak tersedia"
             val message = "Profil Pengguna:\n" +
-                    "Nama: ${it.fullName}\n" +
-                    "Email: ${it.email}\n" +
-                    "Username: ${it.username}"
+                    "Nama: $displayName\n" +
+                    "Email: $email\n" +
+                    "UID: ${it.uid}"
             Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
     }
     
     private fun navigateToPortfolioAdmin() {
         val intent = Intent(this, PortfolioListActivity::class.java)
+        startActivity(intent)
+    }
+    
+    private fun navigateToLogin() {
+        val intent = Intent(this, LoginActivity::class.java)
         startActivity(intent)
     }
 }

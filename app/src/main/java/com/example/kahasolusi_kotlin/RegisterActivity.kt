@@ -6,21 +6,21 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.kahasolusi_kotlin.databinding.ActivityRegisterBinding
+import com.example.kahasolusi_kotlin.firebase.FirebaseAuthManager
+import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRegisterBinding
-    private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
+    private val authManager = FirebaseAuthManager()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
-        // Initialize SharedPreferences helper
-        sharedPreferencesHelper = SharedPreferencesHelper(this)
 
         setupUI()
         setupClickListeners()
@@ -134,21 +134,56 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        // Cek apakah username sudah ada
-        if (sharedPreferencesHelper.isUserExists(username)) {
-            binding.tilUsername.error = "Username sudah terdaftar"
-            Toast.makeText(this, "Username sudah digunakan. Silakan pilih username lain.", Toast.LENGTH_LONG).show()
-            return
-        }
+        // Show loading state
+        binding.btnRegister.isEnabled = false
+        binding.btnRegister.text = "Mendaftar..."
 
-        // Register user baru
-        val isRegistered = sharedPreferencesHelper.registerUser(fullName, email, username, password)
-        
-        if (isRegistered) {
-            Toast.makeText(this, "Registrasi berhasil! Silakan login dengan akun Anda.", Toast.LENGTH_LONG).show()
-            finish() // Kembali ke login
-        } else {
-            Toast.makeText(this, "Registrasi gagal. Silakan coba lagi.", Toast.LENGTH_SHORT).show()
+        // Register with Firebase
+        lifecycleScope.launch {
+            try {
+                val result = authManager.registerUser(email, password, fullName)
+                if (result.isSuccess) {
+                    Toast.makeText(
+                        this@RegisterActivity,
+                        "Registrasi berhasil! Silakan login dengan akun Anda.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    finish() // Go back to login
+                } else {
+                    binding.btnRegister.isEnabled = true
+                    binding.btnRegister.text = "Daftar Sekarang"
+                    val exception = result.exceptionOrNull()
+                    val errorMessage = when {
+                        exception?.message?.contains("network") == true -> 
+                            "Tidak ada koneksi internet. Pastikan WiFi/data aktif dan coba lagi."
+                        exception?.message?.contains("timeout") == true -> 
+                            "Koneksi timeout. Periksa koneksi internet Anda."
+                        exception?.message?.contains("email address is already in use") == true -> 
+                            "Email sudah terdaftar. Silakan gunakan email lain atau login."
+                        exception?.message?.contains("email address is badly formatted") == true -> 
+                            "Format email tidak valid."
+                        else -> "Registrasi gagal: ${exception?.message ?: "Unknown error"}"
+                    }
+                    Toast.makeText(
+                        this@RegisterActivity,
+                        errorMessage,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } catch (e: Exception) {
+                binding.btnRegister.isEnabled = true
+                binding.btnRegister.text = "Daftar Sekarang"
+                val errorMessage = when {
+                    e.message?.contains("network") == true || e.message?.contains("unreachable") == true -> 
+                        "Tidak ada koneksi internet. Pastikan WiFi/data aktif dan Google Play Services terinstall."
+                    else -> "Error: ${e.message}"
+                }
+                Toast.makeText(
+                    this@RegisterActivity,
+                    errorMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 }

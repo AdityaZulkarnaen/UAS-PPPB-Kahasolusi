@@ -7,15 +7,23 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.databinding.ActivityTechnologyAdminBinding
+import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
+import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
+import kotlinx.coroutines.launch
 
 class TechnologyAdminActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTechnologyAdminBinding
+    private lateinit var storageManager: LocalStorageManager
+    private val technologyRepo = FirebaseTechnologyRepository()
+    
     private var selectedImageUri: Uri? = null
     private var editMode = false
     private var technologyId: String? = null
+    private var oldIconUri: String? = null
 
     private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -34,6 +42,9 @@ class TechnologyAdminActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityTechnologyAdminBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Initialize storage manager
+        storageManager = LocalStorageManager(this)
 
         // Setup ActionBar
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -61,6 +72,7 @@ class TechnologyAdminActivity : AppCompatActivity() {
         val iconUri = intent.getStringExtra("technology_icon")
         if (!iconUri.isNullOrEmpty()) {
             try {
+                oldIconUri = iconUri
                 selectedImageUri = Uri.parse(iconUri)
                 binding.ivPreview.setImageURI(selectedImageUri)
                 binding.tvUploadHint.text = "Gambar dipilih"
@@ -110,35 +122,68 @@ class TechnologyAdminActivity : AppCompatActivity() {
             return
         }
 
-        // Buat object Technology
-        val id = if (editMode && technologyId != null) {
-            technologyId!!
-        } else {
-            System.currentTimeMillis().toString()
+        // Show loading
+        showLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                // Save icon to local storage
+                val iconResult = if (editMode && selectedImageUri.toString() == oldIconUri) {
+                    // Icon not changed, use old URI
+                    Result.success(oldIconUri!!)
+                } else {
+                    // New icon selected
+                    storageManager.saveTechnologyIcon(selectedImageUri!!)
+                }
+
+                iconResult.onSuccess { iconUri ->
+                    // Create Technology object
+                    val technology = Technology(
+                        id = technologyId ?: "", // Will be set by Firestore
+                        nama = nama,
+                        iconUri = iconUri
+                    )
+
+                    // Save to Firestore
+                    val result = if (editMode && technologyId != null) {
+                        technologyRepo.updateTechnology(technologyId!!, technology)
+                    } else {
+                        technologyRepo.addTechnology(technology)
+                    }
+
+                    result.onSuccess {
+                        showLoading(false)
+                        val message = if (editMode) "Teknologi berhasil diupdate!" else "Teknologi berhasil disimpan!"
+                        Toast.makeText(this@TechnologyAdminActivity, message, Toast.LENGTH_SHORT).show()
+                        finish()
+                    }.onFailure { e ->
+                        showLoading(false)
+                        Toast.makeText(this@TechnologyAdminActivity, 
+                            "Gagal menyimpan: ${e.message}", 
+                            Toast.LENGTH_LONG).show()
+                    }
+                }.onFailure { e ->
+                    showLoading(false)
+                    Toast.makeText(this@TechnologyAdminActivity, 
+                        "Gagal menyimpan icon: ${e.message}", 
+                        Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                showLoading(false)
+                Toast.makeText(this@TechnologyAdminActivity, 
+                    "Error: ${e.message}", 
+                    Toast.LENGTH_LONG).show()
+            }
         }
+    }
 
-        val technology = Technology(
-            id = id,
-            nama = nama,
-            iconUri = selectedImageUri.toString()
-        )
-
-        // Simpan ke SharedPreferences
-        saveToStorage(technology)
-
-        val message = if (editMode) "Teknologi berhasil diupdate!" else "Teknologi berhasil disimpan!"
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        finish()
+    private fun showLoading(isLoading: Boolean) {
+        binding.btnSimpan.isEnabled = !isLoading
+        binding.btnBatal.isEnabled = !isLoading
+        binding.btnSimpan.text = if (isLoading) "Menyimpan..." else "Simpan"
     }
 
     private fun saveToStorage(technology: Technology) {
-        val sharedPref = getSharedPreferences("TechnologyPrefs", MODE_PRIVATE)
-        val editor = sharedPref.edit()
-
-        // Simpan data technology
-        editor.putString("technology_${technology.id}_nama", technology.nama)
-        editor.putString("technology_${technology.id}_icon", technology.iconUri)
-
-        editor.apply()
+        // Deprecated - now using Firebase
     }
 }

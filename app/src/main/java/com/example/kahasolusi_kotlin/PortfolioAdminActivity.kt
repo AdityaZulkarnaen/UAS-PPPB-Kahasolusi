@@ -4,19 +4,28 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.kahasolusi_kotlin.data.model.Portfolio
 import com.example.kahasolusi_kotlin.databinding.ActivityPortfolioAdminBinding
+import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
+import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
+import kotlinx.coroutines.launch
 
 class PortfolioAdminActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPortfolioAdminBinding
+    private lateinit var storageManager: LocalStorageManager
+    private val portfolioRepo = FirebasePortfolioRepository()
+    
     private var selectedImageUri: Uri? = null
     private var editMode = false
     private var portfolioId: String? = null
+    private var oldImageUri: String? = null
 
     private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -35,6 +44,9 @@ class PortfolioAdminActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPortfolioAdminBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Initialize storage manager
+        storageManager = LocalStorageManager(this)
 
         // Setup ActionBar
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -67,6 +79,7 @@ class PortfolioAdminActivity : AppCompatActivity() {
         val gambarUri = intent.getStringExtra("portfolio_gambar")
         if (!gambarUri.isNullOrEmpty()) {
             try {
+                oldImageUri = gambarUri
                 selectedImageUri = Uri.parse(gambarUri)
                 binding.ivPreview.setImageURI(selectedImageUri)
                 binding.tvUploadHint.text = "Gambar dipilih"
@@ -158,52 +171,72 @@ class PortfolioAdminActivity : AppCompatActivity() {
             return
         }
 
-        // Buat object Portfolio
-        val id = if (editMode && portfolioId != null) {
-            portfolioId!!
-        } else {
-            System.currentTimeMillis().toString()
+        // Show loading
+        showLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                // Save image to local storage
+                val imageResult = if (editMode && selectedImageUri.toString() == oldImageUri) {
+                    // Image not changed, use old URI
+                    Result.success(oldImageUri!!)
+                } else {
+                    // New image selected
+                    storageManager.savePortfolioImage(selectedImageUri!!)
+                }
+
+                imageResult.onSuccess { imageUri ->
+                    // Create Portfolio object
+                    val portfolio = Portfolio(
+                        id = portfolioId ?: "", // Will be set by Firestore
+                        judul = judul,
+                        kategori = kategori.ifEmpty { "Uncategorized" },
+                        lokasi = lokasi,
+                        deskripsi = deskripsi,
+                        gambarUri = imageUri,
+                        techStack = techStack
+                    )
+
+                    // Save to Firestore
+                    val result = if (editMode && portfolioId != null) {
+                        portfolioRepo.updatePortfolio(portfolioId!!, portfolio)
+                    } else {
+                        portfolioRepo.addPortfolio(portfolio)
+                    }
+
+                    result.onSuccess {
+                        showLoading(false)
+                        val message = if (editMode) "Portfolio berhasil diupdate!" else "Portfolio berhasil disimpan!"
+                        Toast.makeText(this@PortfolioAdminActivity, message, Toast.LENGTH_SHORT).show()
+                        finish()
+                    }.onFailure { e ->
+                        showLoading(false)
+                        Toast.makeText(this@PortfolioAdminActivity, 
+                            "Gagal menyimpan: ${e.message}", 
+                            Toast.LENGTH_LONG).show()
+                    }
+                }.onFailure { e ->
+                    showLoading(false)
+                    Toast.makeText(this@PortfolioAdminActivity, 
+                        "Gagal menyimpan gambar: ${e.message}", 
+                        Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                showLoading(false)
+                Toast.makeText(this@PortfolioAdminActivity, 
+                    "Error: ${e.message}", 
+                    Toast.LENGTH_LONG).show()
+            }
         }
+    }
 
-        val portfolio = Portfolio(
-            id = id,
-            judul = judul,
-            kategori = kategori.ifEmpty { "Uncategorized" },
-            lokasi = lokasi,
-            deskripsi = deskripsi,
-            gambarUri = selectedImageUri.toString(),
-            techStack = techStack
-        )
-
-        // Simpan ke SharedPreferences atau Database (implementasi nanti)
-        saveToStorage(portfolio)
-
-        val message = if (editMode) "Portfolio berhasil diupdate!" else "Portfolio berhasil disimpan!"
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        finish()
+    private fun showLoading(isLoading: Boolean) {
+        binding.btnSimpan.isEnabled = !isLoading
+        binding.btnBatal.isEnabled = !isLoading
+        binding.btnSimpan.text = if (isLoading) "Menyimpan..." else "Simpan"
     }
 
     private fun saveToStorage(portfolio: Portfolio) {
-        // TODO: Implementasi save ke SharedPreferences atau Room Database
-        // Untuk sementara, hanya log data
-        println("Portfolio saved: $portfolio")
-        
-        // Simpan ke SharedPreferences sebagai contoh sederhana
-        val sharedPref = getSharedPreferences("PortfolioPrefs", MODE_PRIVATE)
-        val editor = sharedPref.edit()
-        
-        // Simpan counter untuk tracking jumlah portfolio
-        val currentCount = sharedPref.getInt("portfolio_count", 0)
-        editor.putInt("portfolio_count", currentCount + 1)
-        
-        // Simpan data portfolio (simplified - untuk production gunakan Room Database)
-        editor.putString("portfolio_${portfolio.id}_judul", portfolio.judul)
-        editor.putString("portfolio_${portfolio.id}_kategori", portfolio.kategori)
-        editor.putString("portfolio_${portfolio.id}_lokasi", portfolio.lokasi)
-        editor.putString("portfolio_${portfolio.id}_deskripsi", portfolio.deskripsi)
-        editor.putString("portfolio_${portfolio.id}_gambar", portfolio.gambarUri)
-        editor.putString("portfolio_${portfolio.id}_techstack", portfolio.techStack)
-        
-        editor.apply()
+        // Deprecated - now using Firebase
     }
 }

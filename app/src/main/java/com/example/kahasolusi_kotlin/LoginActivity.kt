@@ -7,12 +7,15 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.kahasolusi_kotlin.databinding.ActivityLoginBinding
+import com.example.kahasolusi_kotlin.firebase.FirebaseAuthManager
+import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
-    private lateinit var sharedPreferencesHelper: SharedPreferencesHelper
+    private val authManager = FirebaseAuthManager()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,12 +23,8 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        // Initialize SharedPreferences helper
-        sharedPreferencesHelper = SharedPreferencesHelper(this)
-        
         setupUI()
         setupClickListeners()
-        loadRememberedCredentials()
     }
 
     private fun setupUI() {
@@ -76,7 +75,7 @@ class LoginActivity : AppCompatActivity() {
         
         // Forgot password
         binding.tvForgotPassword.setOnClickListener {
-            Toast.makeText(this, "Forgot Password clicked", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Fitur reset password akan segera tersedia", Toast.LENGTH_SHORT).show()
         }
         
         // Register text click
@@ -84,33 +83,24 @@ class LoginActivity : AppCompatActivity() {
             val intent = Intent(this, RegisterActivity::class.java)
             startActivity(intent)
         }
-        
-        // Remember Me checkbox
-        binding.cbRememberMe.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                Toast.makeText(this, "Credentials will be remembered", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun loadRememberedCredentials() {
-        // Load remembered credentials jika ada
-        val rememberedCredentials = sharedPreferencesHelper.getRememberedCredentials()
-        rememberedCredentials?.let { (username, password) ->
-            binding.etUsername.setText(username)
-            binding.etPassword.setText(password)
-            binding.cbRememberMe.isChecked = true
-        }
     }
 
     private fun performLogin() {
-        val username = binding.etUsername.text?.toString()?.trim() ?: ""
+        val email = binding.etUsername.text?.toString()?.trim() ?: ""
         val password = binding.etPassword.text?.toString()?.trim() ?: ""
-        val rememberMe = binding.cbRememberMe.isChecked
+
+        // Clear previous errors
+        binding.tilUsername.error = null
+        binding.tilPassword.error = null
 
         // Validasi input
-        if (username.isEmpty()) {
-            binding.tilUsername.error = "Username tidak boleh kosong"
+        if (email.isEmpty()) {
+            binding.tilUsername.error = "Email tidak boleh kosong"
+            return
+        }
+
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            binding.tilUsername.error = "Format email tidak valid"
             return
         }
 
@@ -119,29 +109,44 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        // Clear previous errors
-        binding.tilUsername.error = null
-        binding.tilPassword.error = null
+        if (password.length < 6) {
+            binding.tilPassword.error = "Password minimal 6 karakter"
+            return
+        }
 
-        // Coba login menggunakan SharedPreferences
-        if (sharedPreferencesHelper.loginUser(username, password, rememberMe)) {
-            // Login berhasil
-            val message = if (rememberMe) {
-                "Login berhasil! Kredensial akan diingat."
-            } else {
-                "Login berhasil!"
-            }
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            
-            navigateToMainActivity()
-        } else {
-            // Login gagal
-            if (sharedPreferencesHelper.isUserExists(username)) {
-                binding.tilPassword.error = "Password salah"
-                Toast.makeText(this, "Password yang Anda masukkan salah", Toast.LENGTH_LONG).show()
-            } else {
-                binding.tilUsername.error = "Username tidak ditemukan"
-                Toast.makeText(this, "Username tidak terdaftar. Silakan daftar terlebih dahulu.", Toast.LENGTH_LONG).show()
+        // Show loading state
+        binding.btnLogin.isEnabled = false
+        binding.btnLogin.text = "Masuk..."
+
+        // Login with Firebase
+        lifecycleScope.launch {
+            try {
+                val result = authManager.loginUser(email, password)
+                if (result.isSuccess) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Login berhasil!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    navigateToMainActivity()
+                } else {
+                    binding.btnLogin.isEnabled = true
+                    binding.btnLogin.text = "Masuk"
+                    val error = result.exceptionOrNull()?.message ?: "Login gagal"
+                    Toast.makeText(
+                        this@LoginActivity,
+                        error,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } catch (e: Exception) {
+                binding.btnLogin.isEnabled = true
+                binding.btnLogin.text = "Masuk"
+                Toast.makeText(
+                    this@LoginActivity,
+                    "Error: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }

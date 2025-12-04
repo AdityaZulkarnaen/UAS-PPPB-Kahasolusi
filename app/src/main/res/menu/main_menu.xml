@@ -2,6 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     
+    <!-- Menu untuk user yang belum login -->
+    <item
+        android:id="@+id/action_login"
+        android:title="Login"
+        android:icon="@drawable/ic_person"
+        app:showAsAction="never" />
+    
+    <!-- Menu untuk user yang sudah login -->
     <item
         android:id="@+id/action_profile"
         android:title="Profile"

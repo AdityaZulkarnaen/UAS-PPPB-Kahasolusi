@@ -1,21 +1,29 @@
 package com.example.kahasolusi_kotlin
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kahasolusi_kotlin.data.model.Portfolio
 import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.databinding.ActivityPortfolioListBinding
+import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
+import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
+import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.launch
 
 class PortfolioListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPortfolioListBinding
+    private lateinit var storageManager: LocalStorageManager
+    private val portfolioRepo = FirebasePortfolioRepository()
+    private val technologyRepo = FirebaseTechnologyRepository()
+    
     private lateinit var portfolioAdapter: PortfolioAdapter
     private lateinit var technologyAdapter: TechnologyAdapter
     private val portfolioList = mutableListOf<Portfolio>()
@@ -26,6 +34,9 @@ class PortfolioListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPortfolioListBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Initialize storage manager
+        storageManager = LocalStorageManager(this)
 
         // Setup ActionBar
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -121,47 +132,21 @@ class PortfolioListActivity : AppCompatActivity() {
 
     private fun loadPortfolios() {
         portfolioList.clear()
+        showLoading(true)
 
-        val sharedPref = getSharedPreferences("PortfolioPrefs", MODE_PRIVATE)
-        val count = sharedPref.getInt("portfolio_count", 0)
-
-        // Load all portfolios from SharedPreferences
-        val allPrefs = sharedPref.all
-        val portfolioIds = mutableSetOf<String>()
-
-        // Extract unique portfolio IDs
-        for (key in allPrefs.keys) {
-            if (key.startsWith("portfolio_") && key.endsWith("_judul")) {
-                val id = key.removePrefix("portfolio_").removeSuffix("_judul")
-                portfolioIds.add(id)
+        lifecycleScope.launch {
+            val result = portfolioRepo.getAllPortfolios()
+            result.onSuccess { portfolios ->
+                showLoading(false)
+                portfolioList.addAll(portfolios)
+                updateUI()
+            }.onFailure { e ->
+                showLoading(false)
+                Toast.makeText(this@PortfolioListActivity, 
+                    "Gagal load portfolio: ${e.message}", 
+                    Toast.LENGTH_SHORT).show()
+                updateUI()
             }
-        }
-
-        // Load each portfolio
-        for (id in portfolioIds) {
-            val judul = sharedPref.getString("portfolio_${id}_judul", "") ?: ""
-            if (judul.isNotEmpty()) {
-                val portfolio = Portfolio(
-                    id = id,
-                    judul = judul,
-                    kategori = sharedPref.getString("portfolio_${id}_kategori", "") ?: "",
-                    lokasi = sharedPref.getString("portfolio_${id}_lokasi", "") ?: "",
-                    deskripsi = sharedPref.getString("portfolio_${id}_deskripsi", "") ?: "",
-                    gambarUri = sharedPref.getString("portfolio_${id}_gambar", "") ?: "",
-                    techStack = sharedPref.getString("portfolio_${id}_techstack", "") ?: ""
-                )
-                portfolioList.add(portfolio)
-            }
-        }
-
-        // Update UI
-        if (portfolioList.isEmpty()) {
-            binding.rvPortfolio.visibility = View.GONE
-            binding.layoutEmpty.visibility = View.VISIBLE
-        } else {
-            binding.rvPortfolio.visibility = View.VISIBLE
-            binding.layoutEmpty.visibility = View.GONE
-            portfolioAdapter.notifyDataSetChanged()
         }
     }
 
@@ -190,62 +175,47 @@ class PortfolioListActivity : AppCompatActivity() {
     }
 
     private fun deletePortfolio(portfolio: Portfolio) {
-        val sharedPref = getSharedPreferences("PortfolioPrefs", MODE_PRIVATE)
-        val editor = sharedPref.edit()
+        showLoading(true)
 
-        // Remove portfolio data
-        editor.remove("portfolio_${portfolio.id}_judul")
-        editor.remove("portfolio_${portfolio.id}_kategori")
-        editor.remove("portfolio_${portfolio.id}_lokasi")
-        editor.remove("portfolio_${portfolio.id}_deskripsi")
-        editor.remove("portfolio_${portfolio.id}_gambar")
-        editor.remove("portfolio_${portfolio.id}_techstack")
-
-        editor.apply()
-
-        // Reload list
-        loadPortfolios()
-
-        Toast.makeText(this, "Portfolio dihapus", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            // Delete from Firestore
+            val result = portfolioRepo.deletePortfolio(portfolio.id)
+            result.onSuccess {
+                // Delete image from local storage
+                if (portfolio.gambarUri.isNotEmpty()) {
+                    storageManager.deleteImage(portfolio.gambarUri)
+                }
+                
+                showLoading(false)
+                Toast.makeText(this@PortfolioListActivity, "Portfolio dihapus", Toast.LENGTH_SHORT).show()
+                loadPortfolios()
+            }.onFailure { e ->
+                showLoading(false)
+                Toast.makeText(this@PortfolioListActivity, 
+                    "Gagal menghapus: ${e.message}", 
+                    Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     // Technology Methods
     private fun loadTechnologies() {
         technologyList.clear()
+        showLoading(true)
 
-        val sharedPref = getSharedPreferences("TechnologyPrefs", MODE_PRIVATE)
-        val allPrefs = sharedPref.all
-        val technologyIds = mutableSetOf<String>()
-
-        // Extract unique technology IDs
-        for (key in allPrefs.keys) {
-            if (key.startsWith("technology_") && key.endsWith("_nama")) {
-                val id = key.removePrefix("technology_").removeSuffix("_nama")
-                technologyIds.add(id)
+        lifecycleScope.launch {
+            val result = technologyRepo.getAllTechnologies()
+            result.onSuccess { technologies ->
+                showLoading(false)
+                technologyList.addAll(technologies)
+                updateUI()
+            }.onFailure { e ->
+                showLoading(false)
+                Toast.makeText(this@PortfolioListActivity, 
+                    "Gagal load teknologi: ${e.message}", 
+                    Toast.LENGTH_SHORT).show()
+                updateUI()
             }
-        }
-
-        // Load each technology
-        for (id in technologyIds) {
-            val nama = sharedPref.getString("technology_${id}_nama", "") ?: ""
-            if (nama.isNotEmpty()) {
-                val technology = Technology(
-                    id = id,
-                    nama = nama,
-                    iconUri = sharedPref.getString("technology_${id}_icon", "") ?: ""
-                )
-                technologyList.add(technology)
-            }
-        }
-
-        // Update UI
-        if (technologyList.isEmpty()) {
-            binding.rvPortfolio.visibility = View.GONE
-            binding.layoutEmpty.visibility = View.VISIBLE
-        } else {
-            binding.rvPortfolio.visibility = View.VISIBLE
-            binding.layoutEmpty.visibility = View.GONE
-            technologyAdapter.notifyDataSetChanged()
         }
     }
 
@@ -270,18 +240,49 @@ class PortfolioListActivity : AppCompatActivity() {
     }
 
     private fun deleteTechnology(technology: Technology) {
-        val sharedPref = getSharedPreferences("TechnologyPrefs", MODE_PRIVATE)
-        val editor = sharedPref.edit()
+        showLoading(true)
 
-        // Remove technology data
-        editor.remove("technology_${technology.id}_nama")
-        editor.remove("technology_${technology.id}_icon")
+        lifecycleScope.launch {
+            // Delete from Firestore
+            val result = technologyRepo.deleteTechnology(technology.id)
+            result.onSuccess {
+                // Delete icon from local storage
+                if (technology.iconUri.isNotEmpty()) {
+                    storageManager.deleteImage(technology.iconUri)
+                }
+                
+                showLoading(false)
+                Toast.makeText(this@PortfolioListActivity, "Teknologi dihapus", Toast.LENGTH_SHORT).show()
+                loadTechnologies()
+            }.onFailure { e ->
+                showLoading(false)
+                Toast.makeText(this@PortfolioListActivity, 
+                    "Gagal menghapus: ${e.message}", 
+                    Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
-        editor.apply()
+    private fun updateUI() {
+        val list = if (currentTab == 0) portfolioList else technologyList
+        
+        if (list.isEmpty()) {
+            binding.rvPortfolio.visibility = View.GONE
+            binding.layoutEmpty.visibility = View.VISIBLE
+        } else {
+            binding.rvPortfolio.visibility = View.VISIBLE
+            binding.layoutEmpty.visibility = View.GONE
+            
+            if (currentTab == 0) {
+                portfolioAdapter.notifyDataSetChanged()
+            } else {
+                technologyAdapter.notifyDataSetChanged()
+            }
+        }
+    }
 
-        // Reload list
-        loadTechnologies()
-
-        Toast.makeText(this, "Teknologi dihapus", Toast.LENGTH_SHORT).show()
+    private fun showLoading(isLoading: Boolean) {
+        binding.fabAddPortfolio.isEnabled = !isLoading
+        // You can add progress bar here if needed
     }
 }
