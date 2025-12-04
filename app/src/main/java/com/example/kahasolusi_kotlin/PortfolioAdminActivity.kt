@@ -36,14 +36,24 @@ class PortfolioAdminActivity : AppCompatActivity() {
         binding = ActivityPortfolioAdminBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Setup ActionBar
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = "Portfolio Admin"
+
         // Check if edit mode
         editMode = intent.getBooleanExtra("edit_mode", false)
         if (editMode) {
             loadPortfolioData()
+            supportActionBar?.title = "Edit Portfolio"
         }
 
         setupUI()
         setupClickListeners()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
     }
 
     private fun loadPortfolioData() {
@@ -100,11 +110,6 @@ class PortfolioAdminActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // Back button
-        binding.ivBack.setOnClickListener {
-            finish()
-        }
-
         // Upload gambar card
         binding.cvUploadGambar.setOnClickListener {
             openImagePicker()

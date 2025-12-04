@@ -35,13 +35,23 @@ class TechnologyAdminActivity : AppCompatActivity() {
         binding = ActivityTechnologyAdminBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Setup ActionBar
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = "Technology Admin"
+
         // Check if edit mode
         editMode = intent.getBooleanExtra("edit_mode", false)
         if (editMode) {
             loadTechnologyData()
+            supportActionBar?.title = "Edit Technology"
         }
 
         setupClickListeners()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
     }
 
     private fun loadTechnologyData() {
@@ -62,11 +72,6 @@ class TechnologyAdminActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // Back button
-        binding.ivBack.setOnClickListener {
-            finish()
-        }
-
         // Upload gambar card
         binding.cvUploadGambar.setOnClickListener {
             openImagePicker()

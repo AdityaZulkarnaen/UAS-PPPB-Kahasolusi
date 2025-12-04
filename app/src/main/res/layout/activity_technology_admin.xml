@@ -4,62 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_gray"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
 
+    <!-- Form Content -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <!-- Header -->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/white"
-            android:elevation="4dp"
-            android:paddingHorizontal="16dp">
-
-            <ImageView
-                android:id="@+id/iv_back"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_arrow_back"
-                android:contentDescription="Back"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:tint="@color/primary_blue" />
-
-            <TextView
-                android:id="@+id/tv_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="KAHASOLUSI"
-                android:textColor="@color/primary_blue"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.05"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
-
-            <ImageView
-                android:id="@+id/iv_profile"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:src="@drawable/ic_launcher_foreground"
-                android:contentDescription="Profile"
-                android:background="@drawable/technology_icon_background"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:tint="@color/primary_blue" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <!-- Form Content -->
-        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -210,7 +159,5 @@
             </LinearLayout>
 
         </LinearLayout>
-
-    </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>

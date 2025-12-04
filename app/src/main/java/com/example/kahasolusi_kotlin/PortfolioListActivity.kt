@@ -27,9 +27,18 @@ class PortfolioListActivity : AppCompatActivity() {
         binding = ActivityPortfolioListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Setup ActionBar
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = "Portfolio"
+
         setupUI()
         loadPortfolios()
         setupClickListeners()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
     }
 
     override fun onResume() {
@@ -96,11 +105,6 @@ class PortfolioListActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // Back button
-        binding.ivBack.setOnClickListener {
-            finish()
-        }
-
         // Floating Action Button - Tambah Portfolio/Technology
         binding.fabAddPortfolio.setOnClickListener {
             if (currentTab == 0) {
