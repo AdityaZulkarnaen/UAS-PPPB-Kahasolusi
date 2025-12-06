@@ -28,8 +28,9 @@ class PortfolioAdapter(
             if (portfolio.lokasi.isNotEmpty()) {
                 detailParts.add(portfolio.lokasi)
             }
-            if (portfolio.techStack.isNotEmpty()) {
-                detailParts.add(portfolio.techStack)
+            val techStackList = portfolio.getTechStackList()
+            if (techStackList.isNotEmpty()) {
+                detailParts.add(techStackList.joinToString(", "))
             }
             binding.tvDetail.text = detailParts.joinToString(" • ")
 

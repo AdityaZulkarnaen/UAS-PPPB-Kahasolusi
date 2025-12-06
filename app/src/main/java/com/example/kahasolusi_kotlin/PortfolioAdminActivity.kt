@@ -4,16 +4,25 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kahasolusi_kotlin.data.model.Portfolio
+import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.databinding.ActivityPortfolioAdminBinding
+import com.example.kahasolusi_kotlin.databinding.DialogSelectTechStackBinding
 import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
+import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
 import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
+import com.example.kahasolusi_kotlin.ui.portfolio.adapter.TechStackSelectableAdapter
+import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class PortfolioAdminActivity : AppCompatActivity() {
@@ -21,11 +30,15 @@ class PortfolioAdminActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPortfolioAdminBinding
     private lateinit var storageManager: LocalStorageManager
     private val portfolioRepo = FirebasePortfolioRepository()
+    private val technologyRepo = FirebaseTechnologyRepository()
     
     private var selectedImageUri: Uri? = null
     private var editMode = false
     private var portfolioId: String? = null
     private var oldImageUri: String? = null
+    
+    private val selectedTechStacks = mutableListOf<Technology>()
+    private var allTechnologies = listOf<Technology>()
 
     private val imagePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -61,6 +74,7 @@ class PortfolioAdminActivity : AppCompatActivity() {
 
         setupUI()
         setupClickListeners()
+        loadTechnologies()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -74,8 +88,11 @@ class PortfolioAdminActivity : AppCompatActivity() {
         binding.actKategori.setText(intent.getStringExtra("portfolio_kategori"), false)
         binding.etLokasi.setText(intent.getStringExtra("portfolio_lokasi"))
         binding.etDeskripsi.setText(intent.getStringExtra("portfolio_deskripsi"))
-        binding.actTechStack.setText(intent.getStringExtra("portfolio_techstack"), false)
-
+        
+        // Load tech stacks - now expecting ArrayList<String>
+        val techStackIds = intent.getStringArrayListExtra("portfolio_techstack") ?: arrayListOf()
+        // Will be populated after technologies are loaded
+        
         val gambarUri = intent.getStringExtra("portfolio_gambar")
         if (!gambarUri.isNullOrEmpty()) {
             try {
@@ -102,30 +119,17 @@ class PortfolioAdminActivity : AppCompatActivity() {
         )
         val kategoriAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, kategoriList)
         binding.actKategori.setAdapter(kategoriAdapter)
-
-        // Setup Tech Stack Dropdown
-        val techStackList = arrayOf(
-            "React JS",
-            "Vue JS",
-            "Angular",
-            "Laravel",
-            "Node JS",
-            "Python Django",
-            "Kotlin Android",
-            "Flutter",
-            "React Native",
-            "Java Spring Boot",
-            "PHP",
-            ".NET Core"
-        )
-        val techStackAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, techStackList)
-        binding.actTechStack.setAdapter(techStackAdapter)
     }
 
     private fun setupClickListeners() {
         // Upload gambar card
         binding.cvUploadGambar.setOnClickListener {
             openImagePicker()
+        }
+
+        // Add tech stack button
+        binding.btnAddTechStack.setOnClickListener {
+            showTechStackDialog()
         }
 
         // Simpan button
@@ -146,12 +150,101 @@ class PortfolioAdminActivity : AppCompatActivity() {
         imagePickerLauncher.launch(intent)
     }
 
+    private fun loadTechnologies() {
+        lifecycleScope.launch {
+            val result = technologyRepo.getAllTechnologies()
+            result.onSuccess { technologies ->
+                allTechnologies = technologies
+                
+                // Load selected tech stacks if in edit mode
+                if (editMode) {
+                    val techStackIds = intent.getStringArrayListExtra("portfolio_techstack") ?: arrayListOf()
+                    selectedTechStacks.clear()
+                    selectedTechStacks.addAll(
+                        allTechnologies.filter { techStackIds.contains(it.id) }
+                    )
+                    updateTechStackChips()
+                }
+            }.onFailure {
+                Toast.makeText(this@PortfolioAdminActivity, 
+                    "Gagal memuat technology: ${it.message}", 
+                    Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showTechStackDialog() {
+        val dialogBinding = DialogSelectTechStackBinding.inflate(layoutInflater)
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .create()
+
+        // Setup RecyclerView
+        val adapter = TechStackSelectableAdapter { selectedTechs ->
+            // Update will be handled when user clicks "Selesai"
+        }
+        
+        dialogBinding.rvTechStack.layoutManager = LinearLayoutManager(this)
+        dialogBinding.rvTechStack.adapter = adapter
+        
+        // Set currently selected technologies
+        adapter.setSelectedTechnologies(selectedTechStacks.map { it.id })
+        adapter.submitList(allTechnologies)
+        
+        // Search functionality
+        dialogBinding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s.toString().trim()
+                if (query.isEmpty()) {
+                    adapter.submitList(allTechnologies)
+                } else {
+                    val filtered = allTechnologies.filter { 
+                        it.nama.contains(query, ignoreCase = true) 
+                    }
+                    adapter.submitList(filtered)
+                }
+            }
+        })
+
+        // Cancel button
+        dialogBinding.btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Done button
+        dialogBinding.btnDone.setOnClickListener {
+            selectedTechStacks.clear()
+            selectedTechStacks.addAll(adapter.getSelectedTechnologies())
+            updateTechStackChips()
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun updateTechStackChips() {
+        binding.chipGroupTechStack.removeAllViews()
+        
+        selectedTechStacks.forEach { tech ->
+            val chip = Chip(this).apply {
+                text = tech.nama
+                isCloseIconVisible = true
+                setOnCloseIconClickListener {
+                    selectedTechStacks.remove(tech)
+                    updateTechStackChips()
+                }
+            }
+            binding.chipGroupTechStack.addView(chip)
+        }
+    }
+
     private fun savePortfolio() {
         val judul = binding.etJudulProject.text.toString().trim()
         val kategori = binding.actKategori.text.toString().trim()
         val lokasi = binding.etLokasi.text.toString().trim()
         val deskripsi = binding.etDeskripsi.text.toString().trim()
-        val techStack = binding.actTechStack.text.toString().trim()
 
         // Validasi
         if (judul.isEmpty()) {
@@ -170,6 +263,11 @@ class PortfolioAdminActivity : AppCompatActivity() {
             Toast.makeText(this, "Silakan pilih gambar project", Toast.LENGTH_SHORT).show()
             return
         }
+        
+        if (selectedTechStacks.isEmpty()) {
+            Toast.makeText(this, "Silakan pilih minimal satu tech stack", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         // Show loading
         showLoading(true)
@@ -186,7 +284,9 @@ class PortfolioAdminActivity : AppCompatActivity() {
                 }
 
                 imageResult.onSuccess { imageUri ->
-                    // Create Portfolio object
+                    // Create Portfolio object with tech stack IDs
+                    val techStackIds = selectedTechStacks.map { it.id }
+                    
                     val portfolio = Portfolio(
                         id = portfolioId ?: "", // Will be set by Firestore
                         judul = judul,
@@ -194,7 +294,7 @@ class PortfolioAdminActivity : AppCompatActivity() {
                         lokasi = lokasi,
                         deskripsi = deskripsi,
                         gambarUri = imageUri,
-                        techStack = techStack
+                        techStack = techStackIds
                     )
 
                     // Save to Firestore

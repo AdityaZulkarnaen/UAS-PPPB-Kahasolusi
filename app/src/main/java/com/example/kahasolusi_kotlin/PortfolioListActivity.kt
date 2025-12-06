@@ -14,6 +14,7 @@ import com.example.kahasolusi_kotlin.databinding.ActivityPortfolioListBinding
 import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
 import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
+import com.example.kahasolusi_kotlin.utils.DataMigrationUtil
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.launch
 
@@ -43,7 +44,7 @@ class PortfolioListActivity : AppCompatActivity() {
         supportActionBar?.title = "Portfolio"
 
         setupUI()
-        loadPortfolios()
+        checkAndMigrateData()
         setupClickListeners()
     }
 
@@ -130,6 +131,20 @@ class PortfolioListActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkAndMigrateData() {
+        DataMigrationUtil.checkNeedMigration(this, lifecycleScope) { count ->
+            if (count > 0) {
+                DataMigrationUtil.showMigrationDialog(this, lifecycleScope) {
+                    // Reload data after migration
+                    loadPortfolios()
+                }
+            } else {
+                // No migration needed, load normally
+                loadPortfolios()
+            }
+        }
+    }
+
     private fun loadPortfolios() {
         portfolioList.clear()
         showLoading(true)
@@ -158,7 +173,7 @@ class PortfolioListActivity : AppCompatActivity() {
         intent.putExtra("portfolio_lokasi", portfolio.lokasi)
         intent.putExtra("portfolio_deskripsi", portfolio.deskripsi)
         intent.putExtra("portfolio_gambar", portfolio.gambarUri)
-        intent.putExtra("portfolio_techstack", portfolio.techStack)
+        intent.putStringArrayListExtra("portfolio_techstack", ArrayList(portfolio.getTechStackList()))
         intent.putExtra("edit_mode", true)
         startActivity(intent)
     }

@@ -13,7 +13,16 @@ class FirebasePortfolioRepository {
     // Add new portfolio
     suspend fun addPortfolio(portfolio: Portfolio): Result<String> {
         return try {
-            val docRef = portfolioCollection.add(portfolio).await()
+            // Convert to map for better Firestore compatibility
+            val portfolioMap = hashMapOf(
+                "judul" to portfolio.judul,
+                "kategori" to portfolio.kategori,
+                "lokasi" to portfolio.lokasi,
+                "deskripsi" to portfolio.deskripsi,
+                "gambarUri" to portfolio.gambarUri,
+                "techStack" to portfolio.getTechStackList()
+            )
+            val docRef = portfolioCollection.add(portfolioMap).await()
             Result.success(docRef.id)
         } catch (e: Exception) {
             Result.failure(e)
@@ -23,7 +32,16 @@ class FirebasePortfolioRepository {
     // Update existing portfolio
     suspend fun updatePortfolio(portfolioId: String, portfolio: Portfolio): Result<Unit> {
         return try {
-            portfolioCollection.document(portfolioId).set(portfolio).await()
+            // Convert to map for better Firestore compatibility
+            val portfolioMap = hashMapOf(
+                "judul" to portfolio.judul,
+                "kategori" to portfolio.kategori,
+                "lokasi" to portfolio.lokasi,
+                "deskripsi" to portfolio.deskripsi,
+                "gambarUri" to portfolio.gambarUri,
+                "techStack" to portfolio.getTechStackList()
+            )
+            portfolioCollection.document(portfolioId).set(portfolioMap).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -49,7 +67,13 @@ class FirebasePortfolioRepository {
                 .await()
             
             val portfolios = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(Portfolio::class.java)?.copy(id = doc.id)
+                try {
+                    doc.toObject(Portfolio::class.java)?.copy(id = doc.id)
+                } catch (e: Exception) {
+                    // Skip documents that can't be deserialized
+                    e.printStackTrace()
+                    null
+                }
             }
             Result.success(portfolios)
         } catch (e: Exception) {
@@ -78,7 +102,12 @@ class FirebasePortfolioRepository {
                 .await()
             
             val portfolios = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(Portfolio::class.java)?.copy(id = doc.id)
+                try {
+                    doc.toObject(Portfolio::class.java)?.copy(id = doc.id)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
             }
             Result.success(portfolios)
         } catch (e: Exception) {
@@ -92,7 +121,12 @@ class FirebasePortfolioRepository {
             val snapshot = portfolioCollection.get().await()
             
             val portfolios = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(Portfolio::class.java)?.copy(id = doc.id)
+                try {
+                    doc.toObject(Portfolio::class.java)?.copy(id = doc.id)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
             }.filter { portfolio ->
                 portfolio.judul.contains(keyword, ignoreCase = true) ||
                 portfolio.deskripsi.contains(keyword, ignoreCase = true) ||

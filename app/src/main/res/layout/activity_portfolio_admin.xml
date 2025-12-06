@@ -226,26 +226,31 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_tech_stack"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            <!-- Selected Tech Stack Chips -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_tech_stack"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                app:chipSpacing="8dp"
+                app:singleLine="false" />
+
+            <!-- Button to add tech stack -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_add_tech_stack"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
                 android:layout_marginBottom="24dp"
-                app:boxCornerRadiusTopStart="8dp"
-                app:boxCornerRadiusTopEnd="8dp"
-                app:boxCornerRadiusBottomStart="8dp"
-                app:boxCornerRadiusBottomEnd="8dp">
-
-                <AutoCompleteTextView
-                    android:id="@+id/act_tech_stack"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Pilih Tech Stack"
-                    android:inputType="none"
-                    android:textSize="14sp" />
-
-            </com.google.android.material.textfield.TextInputLayout>
+                android:text="Pilih Tech Stack"
+                android:textColor="@color/primary_blue"
+                android:textSize="14sp"
+                app:icon="@android:drawable/ic_input_add"
+                app:iconTint="@color/primary_blue"
+                app:backgroundTint="@color/white"
+                app:strokeColor="@color/primary_blue"
+                app:strokeWidth="1dp"
+                app:cornerRadius="8dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
             <!-- Buttons -->
             <LinearLayout
