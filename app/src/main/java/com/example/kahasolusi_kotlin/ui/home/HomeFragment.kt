@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kahasolusi_kotlin.databinding.FragmentHomeBinding
 import com.example.kahasolusi_kotlin.ui.home.adapter.PortfolioHorizontalAdapter
+import com.example.kahasolusi_kotlin.ui.home.adapter.TechnologyHorizontalAdapter
 
 class HomeFragment : Fragment() {
 
@@ -18,6 +19,7 @@ class HomeFragment : Fragment() {
     
     private lateinit var homeViewModel: HomeViewModel
     private lateinit var portfolioAdapter: PortfolioHorizontalAdapter
+    private lateinit var technologyAdapter: TechnologyHorizontalAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,15 +31,15 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        setupRecyclerView()
+        setupRecyclerViews()
         observeViewModel()
 
         return root
     }
 
-    private fun setupRecyclerView() {
+    private fun setupRecyclerViews() {
+        // Portfolio RecyclerView
         portfolioAdapter = PortfolioHorizontalAdapter { portfolio ->
-            // Handle item click
             Toast.makeText(
                 requireContext(),
                 "Portfolio: ${portfolio.judul}",
@@ -53,11 +55,33 @@ class HomeFragment : Fragment() {
                 false
             )
         }
+
+        // Technology RecyclerView
+        technologyAdapter = TechnologyHorizontalAdapter { technology ->
+            Toast.makeText(
+                requireContext(),
+                "Technology: ${technology.nama}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        
+        binding.rvTechnologyHome.apply {
+            adapter = technologyAdapter
+            layoutManager = LinearLayoutManager(
+                requireContext(),
+                LinearLayoutManager.HORIZONTAL,
+                false
+            )
+        }
     }
 
     private fun observeViewModel() {
         homeViewModel.portfolios.observe(viewLifecycleOwner) { portfolios ->
             portfolioAdapter.submitList(portfolios)
+        }
+        
+        homeViewModel.technologies.observe(viewLifecycleOwner) { technologies ->
+            technologyAdapter.submitList(technologies)
         }
         
         homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
