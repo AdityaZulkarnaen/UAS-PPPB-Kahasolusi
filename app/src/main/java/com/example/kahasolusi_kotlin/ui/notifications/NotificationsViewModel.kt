@@ -3,30 +3,36 @@ package com.example.kahasolusi_kotlin.ui.notifications
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.kahasolusi_kotlin.R
-import com.example.kahasolusi_kotlin.data.model.TechnologyItem
+import androidx.lifecycle.viewModelScope
+import com.example.kahasolusi_kotlin.data.model.Technology
+import com.example.kahasolusi_kotlin.data.repository.AppRepository
+import kotlinx.coroutines.launch
 
 class NotificationsViewModel : ViewModel() {
 
-    private val _technologyList = MutableLiveData<List<TechnologyItem>>()
-    val technologyList: LiveData<List<TechnologyItem>> = _technologyList
+    private val repository = AppRepository.getInstance()
+
+    private val _technologyList = MutableLiveData<List<Technology>>()
+    val technologyList: LiveData<List<Technology>> = _technologyList
+
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
 
     init {
-        loadTechnologyData()
+        loadTechnologies()
     }
 
-    private fun loadTechnologyData() {
-        val technologies = listOf(
-            TechnologyItem(1, "VS Code", R.drawable.vs_code),
-            TechnologyItem(2, "VS Code", R.drawable.vs_code),
-            TechnologyItem(3, "VS Code", R.drawable.vs_code),
-            TechnologyItem(4, "VS Code", R.drawable.vs_code),
-            TechnologyItem(5, "VS Code", R.drawable.vs_code),
-            TechnologyItem(6, "VS Code", R.drawable.vs_code),
-            TechnologyItem(7, "VS Code", R.drawable.vs_code),
-            TechnologyItem(8, "VS Code", R.drawable.vs_code),
-            TechnologyItem(9, "VS Code", R.drawable.vs_code)
-        )
-        _technologyList.value = technologies
+    private fun loadTechnologies() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.getTechnologies().collect { technologies ->
+                _technologyList.value = technologies
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun refreshTechnologies() {
+        loadTechnologies()
     }
 }
