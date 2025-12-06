@@ -1,5 +1,6 @@
 package com.example.kahasolusi_kotlin.ui.home
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +9,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.kahasolusi_kotlin.PortfolioDetailActivity
 import com.example.kahasolusi_kotlin.databinding.FragmentHomeBinding
 import com.example.kahasolusi_kotlin.ui.home.adapter.PortfolioHorizontalAdapter
 import com.example.kahasolusi_kotlin.ui.home.adapter.TechnologyHorizontalAdapter
@@ -40,11 +42,16 @@ class HomeFragment : Fragment() {
     private fun setupRecyclerViews() {
         // Portfolio RecyclerView
         portfolioAdapter = PortfolioHorizontalAdapter { portfolio ->
-            Toast.makeText(
-                requireContext(),
-                "Portfolio: ${portfolio.judul}",
-                Toast.LENGTH_SHORT
-            ).show()
+            val intent = Intent(requireContext(), PortfolioDetailActivity::class.java).apply {
+                putExtra("portfolio_id", portfolio.id)
+                putExtra("portfolio_judul", portfolio.judul)
+                putExtra("portfolio_kategori", portfolio.kategori)
+                putExtra("portfolio_lokasi", portfolio.lokasi)
+                putExtra("portfolio_deskripsi", portfolio.deskripsi)
+                putExtra("portfolio_gambar", portfolio.gambarUri)
+                putStringArrayListExtra("portfolio_techstack", ArrayList(portfolio.getTechStackList()))
+            }
+            startActivity(intent)
         }
         
         binding.rvPortfolioHome.apply {

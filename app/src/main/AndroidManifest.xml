@@ -47,6 +47,11 @@
             android:name=".TechnologyAdminActivity"
             android:exported="false"
             android:label="Technology Admin" />
+        
+        <activity
+            android:name=".PortfolioDetailActivity"
+            android:exported="false"
+            android:label="Detail Portfolio" />
     </application>
 
 </manifest>

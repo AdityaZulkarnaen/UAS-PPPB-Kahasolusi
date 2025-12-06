@@ -18,4 +18,11 @@
         <item name="android:windowBackground">@color/white</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <!-- Theme for Portfolio Detail Activity without ActionBar -->
+    <style name="Theme.KahasolusiKotlin.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>
