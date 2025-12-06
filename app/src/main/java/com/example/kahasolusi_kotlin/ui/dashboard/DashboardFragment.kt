@@ -10,7 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.kahasolusi_kotlin.data.repository.AppRepository
 import com.example.kahasolusi_kotlin.databinding.FragmentDashboardBinding
-import com.example.kahasolusi_kotlin.ui.dashboard.adapter.AppItemAdapter
+import com.example.kahasolusi_kotlin.ui.dashboard.adapter.PortfolioItemAdapter
 
 class DashboardFragment : Fragment() {
 
@@ -18,7 +18,7 @@ class DashboardFragment : Fragment() {
     private val binding get() = _binding!!
     
     private lateinit var dashboardViewModel: DashboardViewModel
-    private lateinit var appItemAdapter: AppItemAdapter
+    private lateinit var portfolioItemAdapter: PortfolioItemAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,29 +39,30 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        appItemAdapter = AppItemAdapter { appItem ->
+        portfolioItemAdapter = PortfolioItemAdapter { portfolio ->
             // Handle item click
             Toast.makeText(
                 requireContext(),
-                "Clicked: ${appItem.title}",
+                "Clicked: ${portfolio.judul}",
                 Toast.LENGTH_SHORT
             ).show()
         }
         
         binding.rvAppItems.apply {
-            adapter = appItemAdapter
+            adapter = portfolioItemAdapter
             layoutManager = LinearLayoutManager(requireContext())
             setHasFixedSize(true)
         }
     }
 
     private fun observeViewModel() {
-        dashboardViewModel.appItems.observe(viewLifecycleOwner) { items ->
-            appItemAdapter.submitList(items)
+        dashboardViewModel.portfolios.observe(viewLifecycleOwner) { portfolios ->
+            portfolioItemAdapter.submitList(portfolios)
         }
         
         dashboardViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             // You can show/hide a loading indicator here
+            // binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
     }
 

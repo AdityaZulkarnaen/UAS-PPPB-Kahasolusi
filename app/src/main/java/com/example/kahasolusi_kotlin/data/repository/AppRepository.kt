@@ -1,38 +1,23 @@
 package com.example.kahasolusi_kotlin.data.repository
 
-import com.example.kahasolusi_kotlin.data.model.AppItem
+import com.example.kahasolusi_kotlin.data.model.Portfolio
+import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class AppRepository {
 
-    // Simulate fetching data from a remote source or database
-    fun getAppItems(): Flow<List<AppItem>> = flow {
-        // In a real app, this would be an API call or database query
-        val items = listOf(
-            AppItem(
-                id = 1,
-                title = "Aplikasi Jogja Center",
-                subtitle = "Daerah Istimewa Yogyakarta",
-                imageUrl = "",
-                category = "Pemerintahan"
-            ),
-            AppItem(
-                id = 2,
-                title = "Aplikasi Jogja Center",
-                subtitle = "Daerah Istimewa Yogyakarta",
-                imageUrl = "",
-                category = "Pemerintahan"
-            ),
-            AppItem(
-                id = 3,
-                title = "Aplikasi Jogja Center",
-                subtitle = "Daerah Istimewa Yogyakarta",
-                imageUrl = "",
-                category = "Pemerintahan"
-            )
-        )
-        emit(items)
+    private val portfolioRepo = FirebasePortfolioRepository()
+
+    // Fetch portfolios from Firebase
+    fun getPortfolios(): Flow<List<Portfolio>> = flow {
+        val result = portfolioRepo.getAllPortfolios()
+        result.onSuccess { portfolios ->
+            emit(portfolios)
+        }.onFailure {
+            // Emit empty list on failure
+            emit(emptyList())
+        }
     }
 
     companion object {
