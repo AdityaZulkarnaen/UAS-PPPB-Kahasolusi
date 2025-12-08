@@ -7,16 +7,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,14 +25,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.example.kahasolusi_kotlin.firebase.FirebaseAuthManager
 import kotlinx.coroutines.launch
 
-class LoginActivity : ComponentActivity() {
+class RegisterActivityCompose : ComponentActivity() {
 
     private val authManager = FirebaseAuthManager()
 
@@ -44,53 +40,57 @@ class LoginActivity : ComponentActivity() {
         
         setContent {
             MaterialTheme {
-                LoginScreen(
+                RegisterScreen(
                     onBackClick = { finish() },
-                    onLoginSuccess = { navigateToMainActivity() },
-                    onRegisterClick = {
-                        startActivity(Intent(this, RegisterActivity::class.java))
+                    onRegisterSuccess = { 
+                        Toast.makeText(this, "Registrasi berhasil! Silakan login.", Toast.LENGTH_LONG).show()
+                        finish() 
                     },
-                    onLogin = { email, password -> performLogin(email, password) }
+                    onLoginClick = { finish() },
+                    onRegister = { email, password, fullName -> performRegister(email, password, fullName) }
                 )
             }
         }
     }
-
     
-    private suspend fun performLogin(email: String, password: String): Result<Unit> {
+    private suspend fun performRegister(email: String, password: String, fullName: String): Result<Unit> {
         return try {
-            val result = authManager.loginUser(email, password)
+            val result = authManager.registerUser(email, password, fullName)
             if (result.isSuccess) {
                 Result.success(Unit)
             } else {
-                Result.failure(result.exceptionOrNull() ?: Exception("Login gagal"))
+                Result.failure(result.exceptionOrNull() ?: Exception("Registrasi gagal"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    
-    private fun navigateToMainActivity() {
-        val intent = Intent(this, MainActivity::class.java)
-        startActivity(intent)
-        finish()
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     onBackClick: () -> Unit,
-    onLoginSuccess: () -> Unit,
-    onRegisterClick: () -> Unit,
-    onLogin: suspend (String, String) -> Result<Unit>
+    onRegisterSuccess: () -> Unit,
+    onLoginClick: () -> Unit,
+    onRegister: suspend (String, String, String) -> Result<Unit>
 ) {
+    var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var agreeTerms by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    
+    var fullNameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
+    var usernameError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+    
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -132,23 +132,41 @@ fun LoginScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Selamat Datang!",
+                text = "Daftar Akun",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF333333)
             )
             
             Text(
-                text = "Masuk untuk melanjutkan",
+                text = "Buat akun baru untuk melanjutkan",
                 fontSize = 16.sp,
                 color = Color(0xFF666666),
                 modifier = Modifier.padding(top = 8.dp)
             )
             
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Full Name Field
+            OutlinedTextField(
+                value = fullName,
+                onValueChange = {
+                    fullName = it
+                    fullNameError = null
+                },
+                label = { Text("Nama Lengkap") },
+                leadingIcon = { Icon(Icons.Default.Person, "Name") },
+                isError = fullNameError != null,
+                supportingText = fullNameError?.let { { Text(it) } },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                singleLine = true
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
             
             // Email Field
             OutlinedTextField(
@@ -162,6 +180,24 @@ fun LoginScreen(
                 isError = emailError != null,
                 supportingText = emailError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                singleLine = true
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Username Field
+            OutlinedTextField(
+                value = username,
+                onValueChange = {
+                    username = it
+                    usernameError = null
+                },
+                label = { Text("Username") },
+                leadingIcon = { Icon(Icons.Default.AccountCircle, "Username") },
+                isError = usernameError != null,
+                supportingText = usernameError?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading,
                 singleLine = true
@@ -195,48 +231,96 @@ fun LoginScreen(
                 singleLine = true
             )
             
-            // Forgot Password
-            TextButton(
-                onClick = { /* Toast message */ },
-                modifier = Modifier.align(Alignment.End)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Confirm Password Field
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = {
+                    confirmPassword = it
+                    confirmPasswordError = null
+                },
+                label = { Text("Konfirmasi Password") },
+                leadingIcon = { Icon(Icons.Default.Lock, "Confirm Password") },
+                trailingIcon = {
+                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                        Icon(
+                            if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            "Toggle password"
+                        )
+                    }
+                },
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                isError = confirmPasswordError != null,
+                supportingText = confirmPasswordError?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                singleLine = true
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Terms Checkbox
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = CenterVertically
             ) {
-                Text("Lupa Password?", color = Color(0xFF1976D2))
+                Checkbox(
+                    checked = agreeTerms,
+                    onCheckedChange = { agreeTerms = it },
+                    enabled = !isLoading
+                )
+                Text(
+                    "Saya setuju dengan syarat dan ketentuan",
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Login Button
+            // Register Button
             Button(
                 onClick = {
                     // Validation
+                    fullNameError = if (fullName.isEmpty()) "Nama lengkap tidak boleh kosong" else null
                     emailError = when {
                         email.isEmpty() -> "Email tidak boleh kosong"
-                        !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> 
-                            "Format email tidak valid"
+                        !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Email tidak valid"
                         else -> null
                     }
-                    
+                    usernameError = when {
+                        username.isEmpty() -> "Username tidak boleh kosong"
+                        username.length < 3 -> "Username minimal 3 karakter"
+                        else -> null
+                    }
                     passwordError = when {
                         password.isEmpty() -> "Password tidak boleh kosong"
                         password.length < 6 -> "Password minimal 6 karakter"
                         else -> null
                     }
+                    confirmPasswordError = if (password != confirmPassword) "Konfirmasi password tidak sama" else null
                     
-                    if (emailError == null && passwordError == null) {
+                    if (fullNameError == null && emailError == null && usernameError == null && 
+                        passwordError == null && confirmPasswordError == null && agreeTerms) {
                         isLoading = true
                         scope.launch {
-                            val result = onLogin(email, password)
+                            val result = onRegister(email, password, fullName)
                             isLoading = false
                             if (result.isSuccess) {
-                                onLoginSuccess()
+                                onRegisterSuccess()
                             }
                         }
+                    } else if (!agreeTerms) {
+                        // Show toast for terms not agreed
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = !isLoading,
+                enabled = !isLoading && agreeTerms,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF1976D2)
@@ -248,23 +332,25 @@ fun LoginScreen(
                         color = Color.White
                     )
                 } else {
-                    Text("Masuk", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Daftar Sekarang", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Register Link
+            // Login Link
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Belum punya akun? ", color = Color(0xFF666666))
-                TextButton(onClick = onRegisterClick) {
-                    Text("Daftar", color = Color(0xFF1976D2), fontWeight = FontWeight.Bold)
+                Text("Sudah punya akun? ", color = Color(0xFF666666))
+                TextButton(onClick = onLoginClick) {
+                    Text("Masuk", color = Color(0xFF1976D2), fontWeight = FontWeight.Bold)
                 }
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
