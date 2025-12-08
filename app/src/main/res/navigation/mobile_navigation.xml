@@ -14,12 +14,12 @@
     <fragment
         android:id="@+id/navigation_dashboard"
         android:name="com.example.kahasolusi_kotlin.ui.dashboard.DashboardFragment"
-        android:label="@string/app_name"
+        android:label="Portfolio"
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment
         android:id="@+id/navigation_notifications"
         android:name="com.example.kahasolusi_kotlin.ui.notifications.NotificationsFragment"
-        android:label="@string/app_name"
+        android:label="Technology"
         tools:layout="@layout/fragment_notifications" />
 </navigation>
