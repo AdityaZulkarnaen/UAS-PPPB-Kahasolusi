@@ -1,342 +1,479 @@
 package com.example.kahasolusi_kotlin
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.View
-import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
+import coil.compose.rememberAsyncImagePainter
 import com.example.kahasolusi_kotlin.data.model.Portfolio
 import com.example.kahasolusi_kotlin.data.model.Technology
-import com.example.kahasolusi_kotlin.databinding.ActivityPortfolioAdminBinding
-import com.example.kahasolusi_kotlin.databinding.DialogSelectTechStackBinding
 import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
 import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
-import com.example.kahasolusi_kotlin.ui.portfolio.adapter.TechStackSelectableAdapter
-import com.google.android.material.chip.Chip
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
-class PortfolioAdminActivity : AppCompatActivity() {
+class PortfolioAdminActivity : ComponentActivity() {
 
-    private lateinit var binding: ActivityPortfolioAdminBinding
     private lateinit var storageManager: LocalStorageManager
     private val portfolioRepo = FirebasePortfolioRepository()
     private val technologyRepo = FirebaseTechnologyRepository()
-    
-    private var selectedImageUri: Uri? = null
-    private var editMode = false
-    private var portfolioId: String? = null
-    private var oldImageUri: String? = null
-    
-    private val selectedTechStacks = mutableListOf<Technology>()
-    private var allTechnologies = listOf<Technology>()
-
-    private val imagePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                selectedImageUri = uri
-                binding.ivPreview.setImageURI(uri)
-                binding.tvUploadHint.text = "Gambar dipilih"
-                binding.tvUploadSubhint.text = "Klik untuk ganti gambar"
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityPortfolioAdminBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Initialize storage manager
+        
         storageManager = LocalStorageManager(this)
 
-        // Setup ActionBar
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Portfolio Admin"
+        val editMode = intent.getBooleanExtra("edit_mode", false)
+        val portfolioId = intent.getStringExtra("portfolio_id")
+        val portfolioJudul = intent.getStringExtra("portfolio_judul") ?: ""
+        val portfolioKategori = intent.getStringExtra("portfolio_kategori") ?: ""
+        val portfolioLokasi = intent.getStringExtra("portfolio_lokasi") ?: ""
+        val portfolioDeskripsi = intent.getStringExtra("portfolio_deskripsi") ?: ""
+        val portfolioGambar = intent.getStringExtra("portfolio_gambar") ?: ""
+        val portfolioTechStack = intent.getStringArrayListExtra("portfolio_techstack") ?: arrayListOf()
 
-        // Check if edit mode
-        editMode = intent.getBooleanExtra("edit_mode", false)
-        if (editMode) {
-            loadPortfolioData()
-            supportActionBar?.title = "Edit Portfolio"
-        }
-
-        setupUI()
-        setupClickListeners()
-        loadTechnologies()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
-    private fun loadPortfolioData() {
-        portfolioId = intent.getStringExtra("portfolio_id")
-        binding.etJudulProject.setText(intent.getStringExtra("portfolio_judul"))
-        binding.actKategori.setText(intent.getStringExtra("portfolio_kategori"), false)
-        binding.etLokasi.setText(intent.getStringExtra("portfolio_lokasi"))
-        binding.etDeskripsi.setText(intent.getStringExtra("portfolio_deskripsi"))
-        
-        // Load tech stacks - now expecting ArrayList<String>
-        val techStackIds = intent.getStringArrayListExtra("portfolio_techstack") ?: arrayListOf()
-        // Will be populated after technologies are loaded
-        
-        val gambarUri = intent.getStringExtra("portfolio_gambar")
-        if (!gambarUri.isNullOrEmpty()) {
-            try {
-                oldImageUri = gambarUri
-                selectedImageUri = Uri.parse(gambarUri)
-                binding.ivPreview.setImageURI(selectedImageUri)
-                binding.tvUploadHint.text = "Gambar dipilih"
-                binding.tvUploadSubhint.text = "Klik untuk ganti gambar"
-            } catch (e: Exception) {
-                e.printStackTrace()
+        setContent {
+            MaterialTheme {
+                PortfolioAdminScreen(
+                    editMode = editMode,
+                    portfolioId = portfolioId,
+                    initialJudul = portfolioJudul,
+                    initialKategori = portfolioKategori,
+                    initialLokasi = portfolioLokasi,
+                    initialDeskripsi = portfolioDeskripsi,
+                    initialGambar = portfolioGambar,
+                    initialTechStack = portfolioTechStack,
+                    onBack = { finish() },
+                    onSave = { judul, kategori, lokasi, deskripsi, imageUri, techStackIds ->
+                        savePortfolio(
+                            editMode, portfolioId, judul, kategori, lokasi, 
+                            deskripsi, imageUri, portfolioGambar, techStackIds
+                        )
+                    },
+                    technologyRepo = technologyRepo
+                )
             }
         }
     }
 
-    private fun setupUI() {
-        // Setup Kategori Dropdown
-        val kategoriList = arrayOf(
-            "Website Development",
-            "Mobile Development",
-            "Desktop Application",
-            "System Integration",
-            "E-Commerce",
-            "CMS Development"
-        )
-        val kategoriAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, kategoriList)
-        binding.actKategori.setAdapter(kategoriAdapter)
-    }
-
-    private fun setupClickListeners() {
-        // Upload gambar card
-        binding.cvUploadGambar.setOnClickListener {
-            openImagePicker()
-        }
-
-        // Add tech stack button
-        binding.btnAddTechStack.setOnClickListener {
-            showTechStackDialog()
-        }
-
-        // Simpan button
-        binding.btnSimpan.setOnClickListener {
-            savePortfolio()
-        }
-
-        // Batal button
-        binding.btnBatal.setOnClickListener {
-            finish()
-        }
-    }
-
-    private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-        }
-        imagePickerLauncher.launch(intent)
-    }
-
-    private fun loadTechnologies() {
-        lifecycleScope.launch {
-            val result = technologyRepo.getAllTechnologies()
-            result.onSuccess { technologies ->
-                allTechnologies = technologies
-                
-                // Load selected tech stacks if in edit mode
-                if (editMode) {
-                    val techStackIds = intent.getStringArrayListExtra("portfolio_techstack") ?: arrayListOf()
-                    selectedTechStacks.clear()
-                    selectedTechStacks.addAll(
-                        allTechnologies.filter { techStackIds.contains(it.id) }
-                    )
-                    updateTechStackChips()
-                }
-            }.onFailure {
-                Toast.makeText(this@PortfolioAdminActivity, 
-                    "Gagal memuat technology: ${it.message}", 
-                    Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun showTechStackDialog() {
-        val dialogBinding = DialogSelectTechStackBinding.inflate(layoutInflater)
-        val dialog = MaterialAlertDialogBuilder(this)
-            .setView(dialogBinding.root)
-            .create()
-
-        // Setup RecyclerView
-        val adapter = TechStackSelectableAdapter { selectedTechs ->
-            // Update will be handled when user clicks "Selesai"
-        }
-        
-        dialogBinding.rvTechStack.layoutManager = LinearLayoutManager(this)
-        dialogBinding.rvTechStack.adapter = adapter
-        
-        // Set currently selected technologies
-        adapter.setSelectedTechnologies(selectedTechStacks.map { it.id })
-        adapter.submitList(allTechnologies)
-        
-        // Search functionality
-        dialogBinding.etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s.toString().trim()
-                if (query.isEmpty()) {
-                    adapter.submitList(allTechnologies)
-                } else {
-                    val filtered = allTechnologies.filter { 
-                        it.nama.contains(query, ignoreCase = true) 
-                    }
-                    adapter.submitList(filtered)
-                }
-            }
-        })
-
-        // Cancel button
-        dialogBinding.btnCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        // Done button
-        dialogBinding.btnDone.setOnClickListener {
-            selectedTechStacks.clear()
-            selectedTechStacks.addAll(adapter.getSelectedTechnologies())
-            updateTechStackChips()
-            dialog.dismiss()
-        }
-
-        dialog.show()
-    }
-
-    private fun updateTechStackChips() {
-        binding.chipGroupTechStack.removeAllViews()
-        
-        selectedTechStacks.forEach { tech ->
-            val chip = Chip(this).apply {
-                text = tech.nama
-                isCloseIconVisible = true
-                setOnCloseIconClickListener {
-                    selectedTechStacks.remove(tech)
-                    updateTechStackChips()
-                }
-            }
-            binding.chipGroupTechStack.addView(chip)
-        }
-    }
-
-    private fun savePortfolio() {
-        val judul = binding.etJudulProject.text.toString().trim()
-        val kategori = binding.actKategori.text.toString().trim()
-        val lokasi = binding.etLokasi.text.toString().trim()
-        val deskripsi = binding.etDeskripsi.text.toString().trim()
-
-        // Validasi
-        if (judul.isEmpty()) {
-            binding.etJudulProject.error = "Judul project harus diisi"
-            binding.etJudulProject.requestFocus()
-            return
-        }
-
-        if (deskripsi.isEmpty()) {
-            binding.etDeskripsi.error = "Deskripsi harus diisi"
-            binding.etDeskripsi.requestFocus()
-            return
-        }
-
-        if (selectedImageUri == null) {
-            Toast.makeText(this, "Silakan pilih gambar project", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        if (selectedTechStacks.isEmpty()) {
-            Toast.makeText(this, "Silakan pilih minimal satu tech stack", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Show loading
-        showLoading(true)
-
+    private fun savePortfolio(
+        editMode: Boolean,
+        portfolioId: String?,
+        judul: String,
+        kategori: String,
+        lokasi: String,
+        deskripsi: String,
+        imageUri: Uri?,
+        oldImageUri: String,
+        techStackIds: List<String>
+    ) {
         lifecycleScope.launch {
             try {
-                // Save image to local storage
-                val imageResult = if (editMode && selectedImageUri.toString() == oldImageUri) {
-                    // Image not changed, use old URI
-                    Result.success(oldImageUri!!)
+                val imageResult = if (editMode && imageUri.toString() == oldImageUri) {
+                    Result.success(oldImageUri)
+                } else if (imageUri != null) {
+                    storageManager.savePortfolioImage(imageUri)
                 } else {
-                    // New image selected
-                    storageManager.savePortfolioImage(selectedImageUri!!)
+                    Result.failure(Exception("No image selected"))
                 }
 
-                imageResult.onSuccess { imageUri ->
-                    // Create Portfolio object with tech stack IDs
-                    val techStackIds = selectedTechStacks.map { it.id }
-                    
+                imageResult.onSuccess { savedImageUri ->
                     val portfolio = Portfolio(
-                        id = portfolioId ?: "", // Will be set by Firestore
+                        id = portfolioId ?: "",
                         judul = judul,
                         kategori = kategori.ifEmpty { "Uncategorized" },
                         lokasi = lokasi,
                         deskripsi = deskripsi,
-                        gambarUri = imageUri,
+                        gambarUri = savedImageUri,
                         techStack = techStackIds
                     )
 
-                    // Save to Firestore
                     val result = if (editMode && portfolioId != null) {
-                        portfolioRepo.updatePortfolio(portfolioId!!, portfolio)
+                        portfolioRepo.updatePortfolio(portfolioId, portfolio)
                     } else {
                         portfolioRepo.addPortfolio(portfolio)
                     }
 
                     result.onSuccess {
-                        showLoading(false)
                         val message = if (editMode) "Portfolio berhasil diupdate!" else "Portfolio berhasil disimpan!"
                         Toast.makeText(this@PortfolioAdminActivity, message, Toast.LENGTH_SHORT).show()
                         finish()
                     }.onFailure { e ->
-                        showLoading(false)
-                        Toast.makeText(this@PortfolioAdminActivity, 
-                            "Gagal menyimpan: ${e.message}", 
-                            Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@PortfolioAdminActivity, "Gagal menyimpan: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }.onFailure { e ->
-                    showLoading(false)
-                    Toast.makeText(this@PortfolioAdminActivity, 
-                        "Gagal menyimpan gambar: ${e.message}", 
-                        Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@PortfolioAdminActivity, "Gagal menyimpan gambar: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                showLoading(false)
-                Toast.makeText(this@PortfolioAdminActivity, 
-                    "Error: ${e.message}", 
-                    Toast.LENGTH_LONG).show()
+                Toast.makeText(this@PortfolioAdminActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PortfolioAdminScreen(
+    editMode: Boolean,
+    portfolioId: String?,
+    initialJudul: String,
+    initialKategori: String,
+    initialLokasi: String,
+    initialDeskripsi: String,
+    initialGambar: String,
+    initialTechStack: List<String>,
+    onBack: () -> Unit,
+    onSave: (String, String, String, String, Uri?, List<String>) -> Unit,
+    technologyRepo: FirebaseTechnologyRepository
+) {
+    var judul by remember { mutableStateOf(initialJudul) }
+    var kategori by remember { mutableStateOf(initialKategori) }
+    var lokasi by remember { mutableStateOf(initialLokasi) }
+    var deskripsi by remember { mutableStateOf(initialDeskripsi) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(if (initialGambar.isNotEmpty()) Uri.parse(initialGambar) else null) }
+    var allTechnologies by remember { mutableStateOf<List<Technology>>(emptyList()) }
+    var selectedTechStacks by remember { mutableStateOf<List<Technology>>(emptyList()) }
+    var showTechDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedImageUri = it }
+    }
+
+    LaunchedEffect(Unit) {
+        technologyRepo.getAllTechnologies().onSuccess { technologies ->
+            allTechnologies = technologies
+            selectedTechStacks = technologies.filter { initialTechStack.contains(it.id) }
+        }
+    }
+
+    val kategoriList = listOf(
+        "Website Development",
+        "Mobile Development",
+        "Desktop Application",
+        "System Integration",
+        "E-Commerce",
+        "CMS Development"
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (editMode) "Edit Portfolio" else "Tambah Portfolio") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Upload Image
+            item {
+                Text(
+                    text = "Gambar Project",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clickable { imagePickerLauncher.launch("image/*") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selectedImageUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(selectedImageUri),
+                                contentDescription = "Preview",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Upload",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = Color.Gray
+                                )
+                                Text("Pilih Gambar", color = Color.Gray)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Judul
+            item {
+                OutlinedTextField(
+                    value = judul,
+                    onValueChange = { judul = it },
+                    label = { Text("Judul Project") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            // Kategori Dropdown
+            item {
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = kategori,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Kategori") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        kategoriList.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    kategori = item
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Lokasi
+            item {
+                OutlinedTextField(
+                    value = lokasi,
+                    onValueChange = { lokasi = it },
+                    label = { Text("Lokasi") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            // Deskripsi
+            item {
+                OutlinedTextField(
+                    value = deskripsi,
+                    onValueChange = { deskripsi = it },
+                    label = { Text("Deskripsi") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    maxLines = 5
+                )
+            }
+
+            // Tech Stack
+            item {
+                Text(
+                    text = "Tech Stack",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Button(
+                    onClick = { showTechDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Pilih Tech Stack")
+                }
+
+                if (selectedTechStacks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        selectedTechStacks.forEach { tech ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(tech.nama)
+                                IconButton(onClick = {
+                                    selectedTechStacks = selectedTechStacks.filter { it.id != tech.id }
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.Red)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Buttons
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier.weight(1f),
+                        enabled = !isLoading
+                    ) {
+                        Text("Batal")
+                    }
+                    Button(
+                        onClick = {
+                            if (judul.isEmpty() || deskripsi.isEmpty() || selectedImageUri == null || selectedTechStacks.isEmpty()) {
+                                return@Button
+                            }
+                            isLoading = true
+                            onSave(judul, kategori, lokasi, deskripsi, selectedImageUri, selectedTechStacks.map { it.id })
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isLoading
+                    ) {
+                        Text(if (isLoading) "Menyimpan..." else "Simpan")
+                    }
+                }
             }
         }
     }
 
-    private fun showLoading(isLoading: Boolean) {
-        binding.btnSimpan.isEnabled = !isLoading
-        binding.btnBatal.isEnabled = !isLoading
-        binding.btnSimpan.text = if (isLoading) "Menyimpan..." else "Simpan"
+    if (showTechDialog) {
+        TechStackDialog(
+            allTechnologies = allTechnologies,
+            selectedTechnologies = selectedTechStacks,
+            onDismiss = { showTechDialog = false },
+            onConfirm = { selected ->
+                selectedTechStacks = selected
+                showTechDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun TechStackDialog(
+    allTechnologies: List<Technology>,
+    selectedTechnologies: List<Technology>,
+    onDismiss: () -> Unit,
+    onConfirm: (List<Technology>) -> Unit
+) {
+    var tempSelected by remember { mutableStateOf(selectedTechnologies) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredTech = if (searchQuery.isEmpty()) {
+        allTechnologies
+    } else {
+        allTechnologies.filter { it.nama.contains(searchQuery, ignoreCase = true) }
     }
 
-    private fun saveToStorage(portfolio: Portfolio) {
-        // Deprecated - now using Firebase
-    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pilih Tech Stack") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Cari...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn(
+                    modifier = Modifier.height(300.dp)
+                ) {
+                    items(filteredTech) { tech ->
+                        val isSelected = tempSelected.any { it.id == tech.id }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    tempSelected = if (isSelected) {
+                                        tempSelected.filter { it.id != tech.id }
+                                    } else {
+                                        tempSelected + tech
+                                    }
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = null
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(tech.nama)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(tempSelected) }) {
+                Text("Selesai")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }

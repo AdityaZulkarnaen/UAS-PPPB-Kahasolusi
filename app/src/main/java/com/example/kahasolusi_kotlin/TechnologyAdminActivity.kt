@@ -1,189 +1,244 @@
 package com.example.kahasolusi_kotlin
 
-import android.app.Activity
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import coil.compose.rememberAsyncImagePainter
 import com.example.kahasolusi_kotlin.data.model.Technology
-import com.example.kahasolusi_kotlin.databinding.ActivityTechnologyAdminBinding
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
 import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
 import kotlinx.coroutines.launch
 
-class TechnologyAdminActivity : AppCompatActivity() {
+class TechnologyAdminActivity : ComponentActivity() {
 
-    private lateinit var binding: ActivityTechnologyAdminBinding
     private lateinit var storageManager: LocalStorageManager
     private val technologyRepo = FirebaseTechnologyRepository()
-    
-    private var selectedImageUri: Uri? = null
-    private var editMode = false
-    private var technologyId: String? = null
-    private var oldIconUri: String? = null
-
-    private val imagePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                selectedImageUri = uri
-                binding.ivPreview.setImageURI(uri)
-                binding.tvUploadHint.text = "Gambar dipilih"
-                binding.tvUploadSubhint.text = "Klik untuk ganti gambar"
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityTechnologyAdminBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Initialize storage manager
+        
         storageManager = LocalStorageManager(this)
 
-        // Setup ActionBar
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Technology Admin"
+        val editMode = intent.getBooleanExtra("edit_mode", false)
+        val technologyId = intent.getStringExtra("technology_id")
+        val technologyNama = intent.getStringExtra("technology_nama") ?: ""
+        val technologyIcon = intent.getStringExtra("technology_icon") ?: ""
 
-        // Check if edit mode
-        editMode = intent.getBooleanExtra("edit_mode", false)
-        if (editMode) {
-            loadTechnologyData()
-            supportActionBar?.title = "Edit Technology"
-        }
-
-        setupClickListeners()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
-    private fun loadTechnologyData() {
-        technologyId = intent.getStringExtra("technology_id")
-        binding.etNamaTeknologi.setText(intent.getStringExtra("technology_nama"))
-
-        val iconUri = intent.getStringExtra("technology_icon")
-        if (!iconUri.isNullOrEmpty()) {
-            try {
-                oldIconUri = iconUri
-                selectedImageUri = Uri.parse(iconUri)
-                binding.ivPreview.setImageURI(selectedImageUri)
-                binding.tvUploadHint.text = "Gambar dipilih"
-                binding.tvUploadSubhint.text = "Klik untuk ganti gambar"
-            } catch (e: Exception) {
-                e.printStackTrace()
+        setContent {
+            MaterialTheme {
+                TechnologyAdminScreen(
+                    editMode = editMode,
+                    technologyId = technologyId,
+                    initialNama = technologyNama,
+                    initialIcon = technologyIcon,
+                    onBack = { finish() },
+                    onSave = { nama, iconUri ->
+                        saveTechnology(editMode, technologyId, nama, iconUri, technologyIcon)
+                    }
+                )
             }
         }
     }
 
-    private fun setupClickListeners() {
-        // Upload gambar card
-        binding.cvUploadGambar.setOnClickListener {
-            openImagePicker()
-        }
-
-        // Simpan button
-        binding.btnSimpan.setOnClickListener {
-            saveTechnology()
-        }
-
-        // Batal button
-        binding.btnBatal.setOnClickListener {
-            finish()
-        }
-    }
-
-    private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-        }
-        imagePickerLauncher.launch(intent)
-    }
-
-    private fun saveTechnology() {
-        val nama = binding.etNamaTeknologi.text.toString().trim()
-
-        // Validasi
-        if (nama.isEmpty()) {
-            binding.etNamaTeknologi.error = "Nama teknologi harus diisi"
-            binding.etNamaTeknologi.requestFocus()
-            return
-        }
-
-        if (selectedImageUri == null) {
-            Toast.makeText(this, "Silakan pilih icon teknologi", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Show loading
-        showLoading(true)
-
+    private fun saveTechnology(
+        editMode: Boolean,
+        technologyId: String?,
+        nama: String,
+        iconUri: Uri?,
+        oldIconUri: String
+    ) {
         lifecycleScope.launch {
             try {
-                // Save icon to local storage
-                val iconResult = if (editMode && selectedImageUri.toString() == oldIconUri) {
-                    // Icon not changed, use old URI
-                    Result.success(oldIconUri!!)
+                val iconResult = if (editMode && iconUri.toString() == oldIconUri) {
+                    Result.success(oldIconUri)
+                } else if (iconUri != null) {
+                    storageManager.saveTechnologyIcon(iconUri)
                 } else {
-                    // New icon selected
-                    storageManager.saveTechnologyIcon(selectedImageUri!!)
+                    Result.failure(Exception("No icon selected"))
                 }
 
-                iconResult.onSuccess { iconUri ->
-                    // Create Technology object
+                iconResult.onSuccess { savedIconUri ->
                     val technology = Technology(
-                        id = technologyId ?: "", // Will be set by Firestore
+                        id = technologyId ?: "",
                         nama = nama,
-                        iconUri = iconUri
+                        iconUri = savedIconUri
                     )
 
-                    // Save to Firestore
                     val result = if (editMode && technologyId != null) {
-                        technologyRepo.updateTechnology(technologyId!!, technology)
+                        technologyRepo.updateTechnology(technologyId, technology)
                     } else {
                         technologyRepo.addTechnology(technology)
                     }
 
                     result.onSuccess {
-                        showLoading(false)
                         val message = if (editMode) "Teknologi berhasil diupdate!" else "Teknologi berhasil disimpan!"
                         Toast.makeText(this@TechnologyAdminActivity, message, Toast.LENGTH_SHORT).show()
                         finish()
                     }.onFailure { e ->
-                        showLoading(false)
-                        Toast.makeText(this@TechnologyAdminActivity, 
-                            "Gagal menyimpan: ${e.message}", 
-                            Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@TechnologyAdminActivity, "Gagal menyimpan: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }.onFailure { e ->
-                    showLoading(false)
-                    Toast.makeText(this@TechnologyAdminActivity, 
-                        "Gagal menyimpan icon: ${e.message}", 
-                        Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@TechnologyAdminActivity, "Gagal menyimpan icon: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                showLoading(false)
-                Toast.makeText(this@TechnologyAdminActivity, 
-                    "Error: ${e.message}", 
-                    Toast.LENGTH_LONG).show()
+                Toast.makeText(this@TechnologyAdminActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
+}
 
-    private fun showLoading(isLoading: Boolean) {
-        binding.btnSimpan.isEnabled = !isLoading
-        binding.btnBatal.isEnabled = !isLoading
-        binding.btnSimpan.text = if (isLoading) "Menyimpan..." else "Simpan"
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TechnologyAdminScreen(
+    editMode: Boolean,
+    technologyId: String?,
+    initialNama: String,
+    initialIcon: String,
+    onBack: () -> Unit,
+    onSave: (String, Uri?) -> Unit
+) {
+    var nama by remember { mutableStateOf(initialNama) }
+    var selectedIconUri by remember { mutableStateOf<Uri?>(if (initialIcon.isNotEmpty()) Uri.parse(initialIcon) else null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedIconUri = it }
     }
 
-    private fun saveToStorage(technology: Technology) {
-        // Deprecated - now using Firebase
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (editMode) "Edit Teknologi" else "Tambah Teknologi") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Upload Icon
+            item {
+                Text(
+                    text = "Icon Teknologi",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clickable { imagePickerLauncher.launch("image/*") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selectedIconUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(selectedIconUri),
+                                contentDescription = "Preview",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Upload",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = Color.Gray
+                                )
+                                Text("Pilih Icon", color = Color.Gray)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Nama Teknologi
+            item {
+                OutlinedTextField(
+                    value = nama,
+                    onValueChange = { nama = it },
+                    label = { Text("Nama Teknologi") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            // Buttons
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier.weight(1f),
+                        enabled = !isLoading
+                    ) {
+                        Text("Batal")
+                    }
+                    Button(
+                        onClick = {
+                            if (nama.isEmpty() || selectedIconUri == null) {
+                                return@Button
+                            }
+                            isLoading = true
+                            onSave(nama, selectedIconUri)
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isLoading
+                    ) {
+                        Text(if (isLoading) "Menyimpan..." else "Simpan")
+                    }
+                }
+            }
+        }
     }
 }
