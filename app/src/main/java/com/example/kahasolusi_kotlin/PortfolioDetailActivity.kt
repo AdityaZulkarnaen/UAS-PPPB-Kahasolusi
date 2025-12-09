@@ -306,16 +306,21 @@ fun TechBadgeItem(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Icon container with light blue background
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .background(
-                    color = Color(0xFFE3F2FD),
-                    shape = RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
+        // Icon container with shadow
+        Card(
+            modifier = Modifier.size(80.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFFFFFF)
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 4.dp
+            )
         ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
             if (technology.iconUri.isNotEmpty()) {
                 Image(
                     painter = rememberAsyncImagePainter(Uri.parse(technology.iconUri)),
@@ -329,6 +334,7 @@ fun TechBadgeItem(
                     modifier = Modifier.size(48.dp),
                     tint = Color(0xFF2196F3)
                 )
+            }
             }
         }
         

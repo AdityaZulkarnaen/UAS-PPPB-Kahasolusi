@@ -181,43 +181,7 @@ fun HomeScreen(
             }
         }
 
-        // Lokasi Kami Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .padding(bottom = 64.dp)
-        ) {
-            Text(
-                text = "Lokasi Kami",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333),
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFE8F4F8)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Map View",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1976D2)
-                    )
-                }
-            }
-        }
+        
     }
 }
 
