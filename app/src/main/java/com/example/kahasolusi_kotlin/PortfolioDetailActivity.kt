@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
 import kotlinx.coroutines.async
@@ -146,7 +148,20 @@ fun PortfolioDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detail Portfolio") },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_kahasolusi),
+                            contentDescription = "Kahasolusi Logo",
+                            modifier = Modifier.height(200.dp)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

@@ -23,8 +23,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
 import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
@@ -131,7 +134,20 @@ fun TechnologyAdminScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (editMode) "Edit Teknologi" else "Tambah Teknologi") },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_kahasolusi),
+                            contentDescription = "Kahasolusi Logo",
+                            modifier = Modifier.height(40.dp)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

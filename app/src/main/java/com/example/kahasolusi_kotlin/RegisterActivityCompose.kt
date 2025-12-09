@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.lifecycleScope
 import com.example.kahasolusi_kotlin.firebase.FirebaseAuthManager
 import kotlinx.coroutines.launch
@@ -97,20 +99,18 @@ fun RegisterScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "KAHASOLUSI",
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF0E2144),
-                                    Color(0xFF1E2642),
-                                    Color(0xFFF16724)
-                                )
-                            ),
-                            fontWeight = FontWeight.Bold
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_kahasolusi),
+                            contentDescription = "Kahasolusi Logo",
+                            modifier = Modifier.height(40.dp)
                         )
-                    )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -118,7 +118,7 @@ fun RegisterScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = Color(0xFFEFF4F5)
                 )
             )
         }
