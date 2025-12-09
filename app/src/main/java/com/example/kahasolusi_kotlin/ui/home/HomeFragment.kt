@@ -91,7 +91,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(Color(0xFFFFFFFF))
             .verticalScroll(rememberScrollState())
     ) {
         // Hero Image Section

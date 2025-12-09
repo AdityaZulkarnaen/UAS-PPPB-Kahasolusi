@@ -92,8 +92,8 @@ class MainActivity : FragmentActivity() {
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
-    object Portfolio : Screen("portfolio", "Portfolio", Icons.Default.Favorite)
-    object Technology : Screen("technology", "Technology", Icons.Default.Info)
+    object Portfolio : Screen("portfolio", "Portfolio", Icons.Default.Task)
+    object Technology : Screen("technology", "Technology", Icons.Default.Code)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -116,9 +116,9 @@ fun MainScreen(
             TopAppBar(
                 title = { Text(selectedScreen.title) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    containerColor = Color(0xFFEFF4F5),
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Black
                 ),
                 actions = {
                     IconButton(onClick = { showMenu = true }) {
@@ -169,7 +169,7 @@ fun MainScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White
+                containerColor = Color(0xFFEFF4F5)
             ) {
                 screens.forEach { screen ->
                     NavigationBarItem(
@@ -178,11 +178,11 @@ fun MainScreen(
                         selected = selectedScreen == screen,
                         onClick = { selectedScreen = screen },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            selectedIconColor = Color(0xFF031117),
+                            selectedTextColor = Color(0xFF031117),
                             unselectedIconColor = Color.Gray,
                             unselectedTextColor = Color.Gray,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            indicatorColor = Color(0xFFB4E4F7)
                         )
                     )
                 }

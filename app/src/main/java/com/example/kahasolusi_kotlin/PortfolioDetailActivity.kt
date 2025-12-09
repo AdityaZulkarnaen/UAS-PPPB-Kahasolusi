@@ -3,41 +3,45 @@ package com.example.kahasolusi_kotlin
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import coil.compose.rememberAsyncImagePainter
 import com.example.kahasolusi_kotlin.data.model.Technology
-import com.example.kahasolusi_kotlin.databinding.ActivityPortfolioDetailBinding
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.launch
 
-class PortfolioDetailActivity : AppCompatActivity() {
+class PortfolioDetailActivity : ComponentActivity() {
 
-    private lateinit var binding: ActivityPortfolioDetailBinding
     private val technologyRepo = FirebaseTechnologyRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityPortfolioDetailBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
-        // Setup ActionBar
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Detail Portfolio"
-
-        // Get portfolio data from intent
-        loadPortfolioData()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
-    private fun loadPortfolioData() {
         val portfolioId = intent.getStringExtra("portfolio_id") ?: ""
         val portfolioJudul = intent.getStringExtra("portfolio_judul") ?: ""
         val portfolioKategori = intent.getStringExtra("portfolio_kategori") ?: ""
@@ -46,133 +50,283 @@ class PortfolioDetailActivity : AppCompatActivity() {
         val portfolioGambar = intent.getStringExtra("portfolio_gambar") ?: ""
         val portfolioTechStack = intent.getStringArrayListExtra("portfolio_techstack") ?: arrayListOf()
 
-        Log.d("PortfolioDetail", "=== Portfolio Detail Debug ===")
-        Log.d("PortfolioDetail", "Portfolio: $portfolioJudul")
-        Log.d("PortfolioDetail", "Tech Stack Raw: $portfolioTechStack")
-        Log.d("PortfolioDetail", "Tech Stack Size: ${portfolioTechStack.size}")
-        portfolioTechStack.forEachIndexed { index, id ->
-            Log.d("PortfolioDetail", "  [$index] = '$id' (length: ${id.length}, trimmed: '${id.trim()}')")
-        }
-
-        // Set data to views
-        binding.apply {
-            tvTitle.text = portfolioJudul
-            tvLocation.text = portfolioLokasi.ifEmpty { "Location not specified" }
-            chipCategory.text = portfolioKategori.ifEmpty { "Uncategorized" }
-            tvDescription.text = portfolioDeskripsi
-
-            // Load image
-            if (portfolioGambar.isNotEmpty()) {
-                try {
-                    val uri = Uri.parse(portfolioGambar)
-                    ivPortfolioPreview.setImageURI(uri)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+        setContent {
+            MaterialTheme {
+                PortfolioDetailScreen(
+                    portfolioJudul = portfolioJudul,
+                    portfolioKategori = portfolioKategori,
+                    portfolioLokasi = portfolioLokasi,
+                    portfolioDeskripsi = portfolioDeskripsi,
+                    portfolioGambar = portfolioGambar,
+                    portfolioTechStack = portfolioTechStack,
+                    technologyRepo = technologyRepo,
+                    onBack = { finish() }
+                )
             }
         }
-
-        // Load tech stack details
-        loadTechStackDetails(portfolioTechStack)
     }
+}
 
-    private fun loadTechStackDetails(techStackIds: List<String>) {
-        Log.d("PortfolioDetail", "Tech Stack IDs: $techStackIds")
-        
-        if (techStackIds.isEmpty()) {
-            Log.d("PortfolioDetail", "Tech stack list is empty")
-            Toast.makeText(this, "No tech stack available", Toast.LENGTH_SHORT).show()
-            return
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PortfolioDetailScreen(
+    portfolioJudul: String,
+    portfolioKategori: String,
+    portfolioLokasi: String,
+    portfolioDeskripsi: String,
+    portfolioGambar: String,
+    portfolioTechStack: List<String>,
+    technologyRepo: FirebaseTechnologyRepository,
+    onBack: () -> Unit
+) {
+    var techStackDetails by remember { mutableStateOf<List<Technology>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(portfolioTechStack) {
+        if (portfolioTechStack.isEmpty()) {
+            isLoading = false
+            techStackDetails = emptyList()
+            Log.d("PortfolioDetail", "No tech stack IDs provided")
+            return@LaunchedEffect
         }
-
-        lifecycleScope.launch {
-            var loadedCount = 0
-            techStackIds.forEach { techId ->
-                Log.d("PortfolioDetail", "Loading tech ID: $techId")
-                
-                // Try to get by ID first
-                val result = technologyRepo.getTechnologyById(techId)
-                result.onSuccess { technology ->
-                    if (technology != null) {
-                        Log.d("PortfolioDetail", "Loaded tech by ID: ${technology.nama}")
-                        addTechStackBadge(technology.nama, technology.iconUri)
-                        loadedCount++
-                    } else {
-                        // Fallback: try to find by name (for old data)
-                        Log.d("PortfolioDetail", "ID not found, searching by name: $techId")
-                        findTechnologyByName(techId)?.let { tech ->
-                            Log.d("PortfolioDetail", "Found tech by name: ${tech.nama}")
-                            addTechStackBadge(tech.nama, tech.iconUri)
-                            loadedCount++
-                        } ?: run {
-                            Log.w("PortfolioDetail", "Technology not found by ID or name: $techId")
+        
+        isLoading = true
+        Log.d("PortfolioDetail", "Loading ${portfolioTechStack.size} tech stack items: $portfolioTechStack")
+        
+        try {
+            // First, get all technologies to match by name if needed
+            val allTechsResult = technologyRepo.getAllTechnologies()
+            val allTechs = allTechsResult.getOrNull() ?: emptyList()
+            
+            // Load all technologies in parallel using async/await
+            val deferredTechs = portfolioTechStack.map { techIdentifier ->
+                async {
+                    try {
+                        Log.d("PortfolioDetail", "Fetching tech identifier: $techIdentifier")
+                        
+                        // Try to get by ID first
+                        val result = technologyRepo.getTechnologyById(techIdentifier)
+                        val tech = result.getOrNull()
+                        
+                        if (tech != null) {
+                            Log.d("PortfolioDetail", "Successfully loaded by ID: ${tech.nama}")
+                            tech
+                        } else {
+                            // If not found by ID, try to match by name (for legacy data)
+                            val techByName = allTechs.find { 
+                                it.nama.equals(techIdentifier, ignoreCase = true) 
+                            }
+                            if (techByName != null) {
+                                Log.d("PortfolioDetail", "Found by name: ${techByName.nama}")
+                                techByName
+                            } else {
+                                Log.w("PortfolioDetail", "Tech not found for identifier: $techIdentifier")
+                                null
+                            }
                         }
-                    }
-                }.onFailure { e ->
-                    Log.e("PortfolioDetail", "Error loading tech $techId: ${e.message}", e)
-                    // Fallback: try to find by name
-                    findTechnologyByName(techId)?.let { tech ->
-                        Log.d("PortfolioDetail", "Found tech by name (after error): ${tech.nama}")
-                        addTechStackBadge(tech.nama, tech.iconUri)
-                        loadedCount++
+                    } catch (e: Exception) {
+                        Log.e("PortfolioDetail", "Error loading tech $techIdentifier: ${e.message}", e)
+                        null
                     }
                 }
             }
             
-            if (loadedCount == 0) {
-                Toast.makeText(this@PortfolioDetailActivity, 
-                    "Failed to load tech stack details", 
-                    Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    
-    private suspend fun findTechnologyByName(name: String): Technology? {
-        return try {
-            val result = technologyRepo.getAllTechnologies()
-            var foundTech: Technology? = null
-            result.onSuccess { technologies ->
-                foundTech = technologies.find { 
-                    it.nama.equals(name, ignoreCase = true) 
-                }
-            }
-            foundTech
+            // Wait for all results and filter out nulls
+            val loadedTechs = deferredTechs.awaitAll().filterNotNull()
+            techStackDetails = loadedTechs
+            Log.d("PortfolioDetail", "Total techs loaded: ${loadedTechs.size}")
         } catch (e: Exception) {
-            Log.e("PortfolioDetail", "Error finding by name: ${e.message}", e)
-            null
+            Log.e("PortfolioDetail", "Error loading tech stack: ${e.message}", e)
+            techStackDetails = emptyList()
+        } finally {
+            isLoading = false
         }
     }
 
-    private fun addTechStackBadge(techName: String, iconUri: String) {
-        Log.d("PortfolioDetail", "Adding badge: $techName with icon: $iconUri")
-        
-        runOnUiThread {
-            try {
-                val badgeView = LayoutInflater.from(this)
-                    .inflate(R.layout.item_tech_stack_badge, binding.gridTechStack, false)
-
-                val techIcon = badgeView.findViewById<ImageView>(R.id.iv_tech_icon)
-                val techNameView = badgeView.findViewById<TextView>(R.id.tv_tech_name)
-
-                techNameView.text = techName
-
-                // Load icon
-                if (iconUri.isNotEmpty()) {
-                    try {
-                        techIcon.setImageURI(Uri.parse(iconUri))
-                    } catch (e: Exception) {
-                        Log.w("PortfolioDetail", "Failed to load icon: ${e.message}")
-                        techIcon.setImageResource(android.R.drawable.ic_menu_gallery)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Detail Portfolio") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFEFF4F5),
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Black
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Portfolio Image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            ) {
+                if (portfolioGambar.isNotEmpty()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(Uri.parse(portfolioGambar)),
+                        contentDescription = portfolioJudul,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                 } else {
-                    techIcon.setImageResource(android.R.drawable.ic_menu_gallery)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFE0E0E0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No Image", color = Color.Gray)
+                    }
+                }
+            }
+
+            // Content with white background
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(16.dp)
+            ) {
+                // Location icon and text
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF666666)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = portfolioLokasi.ifEmpty { "Location not specified" },
+                        fontSize = 12.sp,
+                        color = Color(0xFF666666)
+                    )
                 }
 
-                binding.gridTechStack.addView(badgeView)
-                Log.d("PortfolioDetail", "Badge added successfully")
-            } catch (e: Exception) {
-                Log.e("PortfolioDetail", "Error adding badge: ${e.message}", e)
+                // Title
+                Text(
+                    text = portfolioJudul,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Description
+                Text(
+                    text = portfolioDeskripsi,
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                    lineHeight = 20.sp,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                // Tech Stack Section
+                Text(
+                    text = "Tech Stack:",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else if (techStackDetails.isEmpty()) {
+                    Text(
+                        text = "No tech stack available",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                } else {
+                    // Tech stack grid - 3 columns
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        techStackDetails.chunked(3).forEach { rowTechs ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowTechs.forEach { tech ->
+                                    TechBadgeItem(
+                                        technology = tech,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                // Fill empty spaces if row is not complete
+                                repeat(3 - rowTechs.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+fun TechBadgeItem(
+    technology: Technology,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Icon container with light blue background
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    color = Color(0xFFE3F2FD),
+                    shape = RoundedCornerShape(12.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (technology.iconUri.isNotEmpty()) {
+                Image(
+                    painter = rememberAsyncImagePainter(Uri.parse(technology.iconUri)),
+                    contentDescription = technology.nama,
+                    modifier = Modifier.size(48.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Code,
+                    contentDescription = technology.nama,
+                    modifier = Modifier.size(48.dp),
+                    tint = Color(0xFF2196F3)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Tech name
+        Text(
+            text = technology.nama,
+            fontSize = 12.sp,
+            color = Color.Black,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 2,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
