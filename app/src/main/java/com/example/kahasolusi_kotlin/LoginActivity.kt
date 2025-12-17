@@ -49,8 +49,8 @@ class LoginActivity : ComponentActivity() {
                 LoginScreen(
                     onBackClick = { finish() },
                     onLoginSuccess = { navigateToMainActivity() },
-                    onRegisterClick = {
-                        startActivity(Intent(this, RegisterActivity::class.java))
+                    onLoginError = { errorMessage ->
+                        Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
                     },
                     onLogin = { email, password -> performLogin(email, password) }
                 )
@@ -84,7 +84,7 @@ class LoginActivity : ComponentActivity() {
 fun LoginScreen(
     onBackClick: () -> Unit,
     onLoginSuccess: () -> Unit,
-    onRegisterClick: () -> Unit,
+    onLoginError: (String) -> Unit,
     onLogin: suspend (String, String) -> Result<Unit>
 ) {
     var email by remember { mutableStateOf("") }
@@ -93,6 +93,8 @@ fun LoginScreen(
     var isLoading by remember { mutableStateOf(false) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -229,6 +231,24 @@ fun LoginScreen(
                             isLoading = false
                             if (result.isSuccess) {
                                 onLoginSuccess()
+                            } else {
+                                // Tampilkan error message
+                                val exception = result.exceptionOrNull()
+                                errorMessage = when {
+                                    exception?.message?.contains("password", ignoreCase = true) == true -> 
+                                        "Password yang Anda masukkan salah. Silakan coba lagi."
+                                    exception?.message?.contains("user not found", ignoreCase = true) == true ||
+                                    exception?.message?.contains("no user", ignoreCase = true) == true -> 
+                                        "Email tidak terdaftar. Silakan periksa kembali email Anda."
+                                    exception?.message?.contains("network", ignoreCase = true) == true -> 
+                                        "Tidak ada koneksi internet. Periksa koneksi Anda."
+                                    exception?.message?.contains("too many", ignoreCase = true) == true -> 
+                                        "Terlalu banyak percobaan login. Coba lagi nanti."
+                                    else -> 
+                                        "Login gagal: ${exception?.message ?: "Terjadi kesalahan tidak diketahui"}"
+                                }
+                                showErrorDialog = true
+                                onLoginError(errorMessage)
                             }
                         }
                     }
@@ -252,19 +272,37 @@ fun LoginScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Register Link
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Belum punya akun? ", color = Color(0xFF666666))
-                TextButton(onClick = onRegisterClick) {
-                    Text("Daftar", color = Color(0xFF1976D2), fontWeight = FontWeight.Bold)
-                }
-            }
         }
+    }
+    
+    // Error Dialog
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = "Error",
+                    tint = Color(0xFFD32F2F)
+                )
+            },
+            title = {
+                Text(
+                    text = "Login Gagal",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(errorMessage)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showErrorDialog = false }
+                ) {
+                    Text("OK", color = Color(0xFF1976D2), fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = Color.White
+        )
     }
 }

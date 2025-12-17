@@ -16,3 +16,6 @@ local.properties
 
 # Firebase
 google-services.json
+
+# Cloudflare R2 Credentials
+**/config/R2Config.kt

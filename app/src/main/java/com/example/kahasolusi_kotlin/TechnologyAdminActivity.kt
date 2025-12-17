@@ -30,18 +30,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
-import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
+import com.example.kahasolusi_kotlin.firebase.CloudflareR2Manager
+import com.example.kahasolusi_kotlin.config.R2Config
 import kotlinx.coroutines.launch
 
 class TechnologyAdminActivity : ComponentActivity() {
 
-    private lateinit var storageManager: LocalStorageManager
+    private lateinit var storageManager: CloudflareR2Manager
     private val technologyRepo = FirebaseTechnologyRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        storageManager = LocalStorageManager(this)
+        storageManager = CloudflareR2Manager(this)
 
         val editMode = intent.getBooleanExtra("edit_mode", false)
         val technologyId = intent.getStringExtra("technology_id")
@@ -74,9 +75,15 @@ class TechnologyAdminActivity : ComponentActivity() {
         lifecycleScope.launch {
             try {
                 val iconResult = if (editMode && iconUri.toString() == oldIconUri) {
+                    // Tidak ada perubahan icon, pakai URL lama
                     Result.success(oldIconUri)
                 } else if (iconUri != null) {
-                    storageManager.saveTechnologyIcon(iconUri)
+                    // Upload icon baru dan hapus icon lama (jika ada)
+                    if (editMode && oldIconUri.isNotEmpty()) {
+                        storageManager.updateImage(oldIconUri, iconUri, R2Config.TECHNOLOGY_FOLDER)
+                    } else {
+                        storageManager.uploadTechnologyIcon(iconUri)
+                    }
                 } else {
                     Result.failure(Exception("No icon selected"))
                 }

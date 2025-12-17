@@ -16,59 +16,17 @@ class SharedPreferencesHelper(context: Context) {
         private const val KEY_FULL_NAME = "full_name"
         private const val KEY_PASSWORD = "password"
         private const val KEY_REMEMBER_ME = "remember_me"
-        
-        // Prefix untuk menyimpan data user yang register
-        private const val PREFIX_USER = "user_"
-        private const val SUFFIX_FULL_NAME = "_full_name"
-        private const val SUFFIX_EMAIL = "_email"
-        private const val SUFFIX_PASSWORD = "_password"
     }
     
-    // Fungsi untuk register user baru
-    fun registerUser(fullName: String, email: String, username: String, password: String): Boolean {
-        // Cek apakah username sudah ada
-        if (isUserExists(username)) {
-            return false
-        }
-        
+    // Fungsi untuk login (menggunakan Firebase Auth, SharedPreferences hanya menyimpan session)
+    fun saveLoginSession(email: String, fullName: String, rememberMe: Boolean): Boolean {
         val editor = sharedPreferences.edit()
-        editor.putString("$PREFIX_USER$username$SUFFIX_FULL_NAME", fullName)
-        editor.putString("$PREFIX_USER$username$SUFFIX_EMAIL", email)
-        editor.putString("$PREFIX_USER$username$SUFFIX_PASSWORD", password)
+        editor.putBoolean(KEY_IS_LOGGED_IN, true)
+        editor.putString(KEY_EMAIL, email)
+        editor.putString(KEY_FULL_NAME, fullName)
+        editor.putBoolean(KEY_REMEMBER_ME, rememberMe)
         editor.apply()
-        
         return true
-    }
-    
-    // Fungsi untuk cek apakah user sudah ada
-    fun isUserExists(username: String): Boolean {
-        return sharedPreferences.contains("$PREFIX_USER$username$SUFFIX_FULL_NAME")
-    }
-    
-    // Fungsi untuk login
-    fun loginUser(username: String, password: String, rememberMe: Boolean): Boolean {
-        val storedPassword = sharedPreferences.getString("$PREFIX_USER$username$SUFFIX_PASSWORD", null)
-        
-        if (storedPassword != null && storedPassword == password) {
-            // Login berhasil, simpan session
-            val editor = sharedPreferences.edit()
-            editor.putBoolean(KEY_IS_LOGGED_IN, true)
-            editor.putString(KEY_USERNAME, username)
-            editor.putString(KEY_EMAIL, sharedPreferences.getString("$PREFIX_USER$username$SUFFIX_EMAIL", ""))
-            editor.putString(KEY_FULL_NAME, sharedPreferences.getString("$PREFIX_USER$username$SUFFIX_FULL_NAME", ""))
-            editor.putBoolean(KEY_REMEMBER_ME, rememberMe)
-            
-            if (rememberMe) {
-                editor.putString(KEY_PASSWORD, password)
-            } else {
-                editor.remove(KEY_PASSWORD)
-            }
-            
-            editor.apply()
-            return true
-        }
-        
-        return false
     }
     
     // Fungsi untuk logout

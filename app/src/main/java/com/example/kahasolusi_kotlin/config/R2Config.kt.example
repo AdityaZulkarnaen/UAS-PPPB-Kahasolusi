@@ -1,0 +1,41 @@
+package com.example.kahasolusi_kotlin.config
+
+/**
+ * Cloudflare R2 Storage Configuration Template
+ * 
+ * CARA SETUP:
+ * 1. Copy file ini menjadi "R2Config.kt" (tanpa .example)
+ * 2. Isi ACCESS_KEY_ID dan SECRET_ACCESS_KEY dengan credentials dari Cloudflare
+ * 3. File R2Config.kt sudah di-ignore oleh Git (aman dari commit)
+ * 
+ * CARA MENDAPATKAN CREDENTIALS:
+ * 1. Login ke https://dash.cloudflare.com
+ * 2. R2 → Manage R2 API Tokens
+ * 3. Create API Token dengan Object Read & Write permission
+ * 4. Copy Access Key ID dan Secret Access Key
+ */
+object R2Config {
+    
+    const val BUCKET_NAME = "kahasolusi"
+    const val REGION = "auto"
+    const val ENDPOINT = "https://5c6984d3b427df7137c5c75d6270cb63.r2.cloudflarestorage.com"
+    const val PUBLIC_URL = "https://5c6984d3b427df7137c5c75d6270cb63.r2.cloudflarestorage.com/kahasolusi"
+    
+    const val PORTFOLIO_FOLDER = "portfolio"
+    const val TECHNOLOGY_FOLDER = "technology"
+    
+    // ⚠️ ISI CREDENTIALS DI SINI ⚠️
+    const val ACCESS_KEY_ID = "YOUR_ACCESS_KEY_ID_HERE"
+    const val SECRET_ACCESS_KEY = "YOUR_SECRET_ACCESS_KEY_HERE"
+    
+    fun isConfigured(): Boolean {
+        return ACCESS_KEY_ID != "YOUR_ACCESS_KEY_ID_HERE" && 
+               SECRET_ACCESS_KEY != "YOUR_SECRET_ACCESS_KEY_HERE" &&
+               ACCESS_KEY_ID.isNotEmpty() && 
+               SECRET_ACCESS_KEY.isNotEmpty()
+    }
+    
+    fun getPublicUrl(folder: String, fileName: String): String {
+        return "$PUBLIC_URL/$folder/$fileName"
+    }
+}

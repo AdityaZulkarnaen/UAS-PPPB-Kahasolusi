@@ -82,6 +82,9 @@ dependencies {
     // Coil for image loading in Compose
     implementation(libs.coil.compose)
     
+    // OkHttp for Cloudflare R2 upload
+    implementation(libs.okhttp)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

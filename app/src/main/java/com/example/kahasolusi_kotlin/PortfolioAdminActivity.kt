@@ -36,19 +36,20 @@ import com.example.kahasolusi_kotlin.data.model.Portfolio
 import com.example.kahasolusi_kotlin.data.model.Technology
 import com.example.kahasolusi_kotlin.firebase.FirebasePortfolioRepository
 import com.example.kahasolusi_kotlin.firebase.FirebaseTechnologyRepository
-import com.example.kahasolusi_kotlin.firebase.LocalStorageManager
+import com.example.kahasolusi_kotlin.firebase.CloudflareR2Manager
+import com.example.kahasolusi_kotlin.config.R2Config
 import kotlinx.coroutines.launch
 
 class PortfolioAdminActivity : ComponentActivity() {
 
-    private lateinit var storageManager: LocalStorageManager
+    private lateinit var storageManager: CloudflareR2Manager
     private val portfolioRepo = FirebasePortfolioRepository()
     private val technologyRepo = FirebaseTechnologyRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        storageManager = LocalStorageManager(this)
+        storageManager = CloudflareR2Manager(this)
 
         val editMode = intent.getBooleanExtra("edit_mode", false)
         val portfolioId = intent.getStringExtra("portfolio_id")
@@ -96,10 +97,22 @@ class PortfolioAdminActivity : ComponentActivity() {
     ) {
         lifecycleScope.launch {
             try {
-                val imageResult = if (editMode && imageUri.toString() == oldImageUri) {
+                // Cek apakah imageUri adalah URL lama (tidak berubah) atau URI baru dari picker
+                val isUrlNotChanged = imageUri?.toString() == oldImageUri
+                
+                val imageResult = if (editMode && isUrlNotChanged) {
+                    // Tidak ada perubahan gambar, pakai URL lama
                     Result.success(oldImageUri)
+                } else if (imageUri != null && !isUrlNotChanged) {
+                    // Upload gambar baru dan hapus gambar lama (jika ada)
+                    if (editMode && oldImageUri.isNotEmpty()) {
+                        storageManager.updateImage(oldImageUri, imageUri, R2Config.PORTFOLIO_FOLDER)
+                    } else {
+                        storageManager.uploadPortfolioImage(imageUri)
+                    }
                 } else if (imageUri != null) {
-                    storageManager.savePortfolioImage(imageUri)
+                    // Fallback: ada imageUri tapi cek gagal, coba upload
+                    storageManager.uploadPortfolioImage(imageUri)
                 } else {
                     Result.failure(Exception("No image selected"))
                 }
@@ -158,16 +171,22 @@ fun PortfolioAdminScreen(
     var lokasi by remember { mutableStateOf(initialLokasi) }
     var deskripsi by remember { mutableStateOf(initialDeskripsi) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(if (initialGambar.isNotEmpty()) Uri.parse(initialGambar) else null) }
+    var imageChanged by remember { mutableStateOf(false) } // Track if image was changed
     var allTechnologies by remember { mutableStateOf<List<Technology>>(emptyList()) }
     var selectedTechStacks by remember { mutableStateOf<List<Technology>>(emptyList()) }
     var showTechDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { selectedImageUri = it }
+        uri?.let { 
+            selectedImageUri = it
+            imageChanged = true // Mark image as changed when new one selected
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -394,8 +413,40 @@ fun PortfolioAdminScreen(
                     }
                     Button(
                         onClick = {
-                            if (judul.isEmpty() || deskripsi.isEmpty() || selectedImageUri == null || selectedTechStacks.isEmpty()) {
-                                return@Button
+                            // Validasi dengan feedback
+                            when {
+                                judul.isEmpty() -> {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Judul tidak boleh kosong",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
+                                deskripsi.isEmpty() -> {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Deskripsi tidak boleh kosong",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
+                                selectedImageUri == null -> {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Gambar tidak boleh kosong",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
+                                selectedTechStacks.isEmpty() -> {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Pilih minimal 1 teknologi",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
                             }
                             isLoading = true
                             onSave(judul, kategori, lokasi, deskripsi, selectedImageUri, selectedTechStacks.map { it.id })

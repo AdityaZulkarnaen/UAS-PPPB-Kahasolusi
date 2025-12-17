@@ -20,6 +20,8 @@ composeBom = "2024.12.01"
 activityCompose = "1.9.3"
 lifecycleRuntimeKtx = "2.8.7"
 coilCompose = "2.5.0"
+awsS3 = "2.77.0"
+okhttp = "4.12.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +54,9 @@ lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-
 lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 lifecycle-livedata-compose = { group = "androidx.compose.runtime", name = "runtime-livedata", version = "" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
+aws-s3 = { group = "com.amazonaws", name = "aws-android-sdk-s3", version.ref = "awsS3" }
+aws-core = { group = "com.amazonaws", name = "aws-android-sdk-core", version.ref = "awsS3" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
